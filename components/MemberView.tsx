@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Key, User } from 'lucide-react';
+import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Key, User, X } from 'lucide-react';
 import { TargetTrack } from '../types';
 import { fetchRecentTracks } from '../services/lastFmService';
 import { STORAGE_KEY_API_KEY } from '../constants';
@@ -15,6 +15,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
   const [synced, setSynced] = useState(false);
   const [matchedTrackIds, setMatchedTrackIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [showReward, setShowReward] = useState(false);
 
   // Load API Key from local storage on mount
   useEffect(() => {
@@ -73,6 +74,10 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleClaim = () => {
+    setShowReward(true);
   };
 
   const progress = calculateProgress();
@@ -198,16 +203,49 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
 
           {/* Daily Check-In Button */}
           <button 
+            onClick={handleClaim}
             disabled={!isComplete}
             className={`w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all duration-500 ${
               isComplete 
-                ? 'bg-gradient-to-r from-neon-purple to-pink-600 text-white shadow-[0_0_30px_rgba(176,38,255,0.6)] scale-100 hover:scale-[1.02]' 
+                ? 'bg-gradient-to-r from-neon-purple to-pink-600 text-white shadow-[0_0_30px_rgba(176,38,255,0.6)] scale-100 hover:scale-[1.02] cursor-pointer' 
                 : 'bg-white/5 text-gray-500 cursor-not-allowed border border-white/5'
             }`}
           >
             <Trophy size={24} className={isComplete ? 'text-yellow-300' : ''} />
             {isComplete ? 'CLAIM DAILY CHECK-IN' : 'Complete 100% to Check-In'}
           </button>
+        </div>
+      )}
+
+      {/* Reward Modal */}
+      {showReward && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fade-in">
+            <div className="glass max-w-sm w-full p-8 rounded-3xl text-center relative border border-neon-purple/50 shadow-[0_0_50px_rgba(176,38,255,0.3)]">
+                <button 
+                    onClick={() => setShowReward(false)}
+                    className="absolute top-4 right-4 text-gray-400 hover:text-white"
+                >
+                    <X size={24} />
+                </button>
+                
+                <div className="mx-auto w-24 h-24 bg-gradient-to-br from-yellow-300 to-yellow-600 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(234,179,8,0.5)] animate-bounce">
+                    <Trophy size={48} className="text-white drop-shadow-md" />
+                </div>
+                
+                <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-purple to-pink-500 mb-2 uppercase italic">
+                    Check-In Complete!
+                </h2>
+                <p className="text-gray-300 mb-8 font-medium">
+                    You've streamed all target tracks today. Great job keeping the community active!
+                </p>
+                
+                <button
+                    onClick={() => setShowReward(false)}
+                    className="w-full py-3 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform shadow-lg"
+                >
+                    Awesome!
+                </button>
+            </div>
         </div>
       )}
     </div>
