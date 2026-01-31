@@ -1,5 +1,5 @@
 import { LastFmTrack } from '../types';
-import { LAST_FM_API_KEY, LAST_FM_API_URL } from '../constants';
+import { LAST_FM_API_URL } from '../constants';
 
 interface LastFmResponse {
   recenttracks: {
@@ -9,16 +9,14 @@ interface LastFmResponse {
 
 /**
  * Fetches recent tracks from Last.fm.
- * Falls back to mock data if the API Key is the default placeholder or if the fetch fails (for demo purposes).
+ * Uses the provided apiKey. Falls back to mock data if apiKey is empty.
  */
-export const fetchRecentTracks = async (username: string): Promise<LastFmTrack[]> => {
-  const isDemoKey = LAST_FM_API_KEY === 'YOUR_LAST_FM_API_KEY_HERE';
-  
+export const fetchRecentTracks = async (username: string, apiKey: string): Promise<LastFmTrack[]> => {
   if (!username) return [];
 
-  // Simulate API call if no real key provided to ensure UI can be tested
-  if (isDemoKey) {
-    console.warn('Using Mock Data because valid API KEY is missing.');
+  // If no API key is provided, use mock data for demonstration
+  if (!apiKey) {
+    console.warn('No API Key provided, using Mock Data.');
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve(mockData);
@@ -27,11 +25,14 @@ export const fetchRecentTracks = async (username: string): Promise<LastFmTrack[]
   }
 
   try {
-    const url = `${LAST_FM_API_URL}?method=user.getrecenttracks&user=${username}&api_key=${LAST_FM_API_KEY}&format=json&limit=50`;
+    const url = `${LAST_FM_API_URL}?method=user.getrecenttracks&user=${username}&api_key=${apiKey}&format=json&limit=50`;
     const response = await fetch(url);
     
     if (!response.ok) {
-      throw new Error('Failed to fetch from Last.fm');
+        if (response.status === 403) {
+            throw new Error('Invalid API Key');
+        }
+        throw new Error('Failed to fetch from Last.fm');
     }
 
     const data: LastFmResponse = await response.json();
@@ -43,9 +44,8 @@ export const fetchRecentTracks = async (username: string): Promise<LastFmTrack[]
     
     return data.recenttracks.track;
   } catch (error) {
-    console.error('API Error, falling back to mock data for demo:', error);
-    // Fallback to mock data so the app "works" for the user immediately
-    return mockData;
+    console.error('API Error:', error);
+    throw error;
   }
 };
 

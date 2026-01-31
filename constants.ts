@@ -1,9 +1,5 @@
 import { TargetTrack } from './types';
 
-// NOTE: Ideally, this should be in an .env file.
-// For the purpose of this demo, we use a placeholder.
-// If the API key is invalid or not provided, the service will mock the response.
-export const LAST_FM_API_KEY = 'YOUR_LAST_FM_API_KEY_HERE'; 
 export const LAST_FM_API_URL = 'https://ws.audioscrobbler.com/2.0/';
 
 export const ADMIN_PIN = '1234';
@@ -15,3 +11,4 @@ export const DEFAULT_TRACKS: TargetTrack[] = [
 ];
 
 export const STORAGE_KEY = 'streamguard_playlist';
+export const STORAGE_KEY_API_KEY = 'streamguard_api_key';

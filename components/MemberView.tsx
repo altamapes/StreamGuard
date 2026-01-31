@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle } from 'lucide-react';
-import { TargetTrack, LastFmTrack } from '../types';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Key, User } from 'lucide-react';
+import { TargetTrack } from '../types';
 import { fetchRecentTracks } from '../services/lastFmService';
+import { STORAGE_KEY_API_KEY } from '../constants';
 
 interface MemberViewProps {
   tracks: TargetTrack[];
@@ -9,10 +10,19 @@ interface MemberViewProps {
 
 export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
   const [username, setUsername] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [synced, setSynced] = useState(false);
   const [matchedTrackIds, setMatchedTrackIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+
+  // Load API Key from local storage on mount
+  useEffect(() => {
+    const storedKey = localStorage.getItem(STORAGE_KEY_API_KEY);
+    if (storedKey) {
+      setApiKey(storedKey);
+    }
+  }, []);
 
   const calculateProgress = () => {
     if (tracks.length === 0) return 0;
@@ -28,8 +38,14 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
     setIsLoading(true);
     setError(null);
 
+    // Save API Key to local storage
+    if (apiKey) {
+      localStorage.setItem(STORAGE_KEY_API_KEY, apiKey);
+    }
+
     try {
-      const recentTracks = await fetchRecentTracks(username);
+      // Pass the apiKey to the service
+      const recentTracks = await fetchRecentTracks(username, apiKey);
       
       const newMatches = new Set<string>();
 
@@ -52,8 +68,8 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
 
       setMatchedTrackIds(newMatches);
       setSynced(true);
-    } catch (err) {
-      setError('Failed to sync. Please check username or try again later.');
+    } catch (err: any) {
+      setError(err.message || 'Failed to sync. Please check username/API Key.');
     } finally {
       setIsLoading(false);
     }
@@ -73,33 +89,54 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
       </div>
 
       {/* Input Section */}
-      <div className="w-full glass p-6 rounded-2xl mb-6 shadow-[0_0_30px_rgba(0,0,0,0.3)]">
-        <label className="block text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wider">
-          Last.fm Username
-        </label>
-        <div className="flex gap-2">
+      <div className="w-full glass p-6 rounded-2xl mb-6 shadow-[0_0_30px_rgba(0,0,0,0.3)] space-y-4">
+        
+        {/* Username Input */}
+        <div>
+          <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider flex items-center gap-1">
+            <User size={12} /> Last.fm Username
+          </label>
           <input 
             type="text" 
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="e.g. user123"
-            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-neon-green text-white placeholder-gray-500 transition-colors"
+            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-neon-green text-white placeholder-gray-500 transition-colors"
           />
-          <button 
-            onClick={handleSync}
-            disabled={isLoading}
-            className={`px-4 rounded-xl font-bold flex items-center gap-2 transition-all ${
-              isLoading 
-                ? 'bg-gray-600 cursor-not-allowed' 
-                : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]'
-            }`}
-          >
-            <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
-            {isLoading ? '...' : 'Sync'}
-          </button>
         </div>
+
+        {/* API Key Input */}
+        <div>
+          <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider flex items-center gap-1">
+             <Key size={12} /> Last.fm API Key
+          </label>
+          <input 
+            type="password" 
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="Enter your API Key"
+            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-neon-purple text-white placeholder-gray-500 transition-colors"
+          />
+          <p className="text-[10px] text-gray-500 mt-1">
+            Don't have one? <a href="https://www.last.fm/api/account/create" target="_blank" rel="noreferrer" className="text-neon-purple hover:underline">Get it here</a>. Leave empty to use Mock Data.
+          </p>
+        </div>
+
+        <button 
+          onClick={handleSync}
+          disabled={isLoading}
+          className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all mt-2 ${
+            isLoading 
+              ? 'bg-gray-600 cursor-not-allowed' 
+              : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]'
+          }`}
+        >
+          <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
+          {isLoading ? 'Sync Progress' : 'Sync Progress'}
+        </button>
+        
         {error && (
-            <div className="mt-3 flex items-center gap-2 text-red-400 text-sm bg-red-900/20 p-2 rounded-lg">
+            <div className="mt-3 flex items-center gap-2 text-red-400 text-sm bg-red-900/20 p-2 rounded-lg animate-pulse">
                 <AlertCircle size={16} />
                 {error}
             </div>
