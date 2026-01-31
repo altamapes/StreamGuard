@@ -16,6 +16,9 @@ export interface LastFmTrack {
     uts: string;
     '#text': string;
   };
+  '@attr'?: {
+    nowplaying: string;
+  };
 }
 
 export enum ViewMode {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Key, User, X } from 'lucide-react';
+import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Key, User, X, Clock } from 'lucide-react';
 import { TargetTrack } from '../types';
 import { fetchRecentTracks } from '../services/lastFmService';
 import { STORAGE_KEY_API_KEY } from '../constants';
@@ -13,7 +13,10 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
   const [apiKey, setApiKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [synced, setSynced] = useState(false);
-  const [matchedTrackIds, setMatchedTrackIds] = useState<Set<string>>(new Set());
+  
+  // Changed from Set<string> to Record<string, string> to store the time
+  const [matchedStatus, setMatchedStatus] = useState<Record<string, string>>({});
+  
   const [error, setError] = useState<string | null>(null);
   const [showReward, setShowReward] = useState(false);
 
@@ -27,7 +30,9 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
 
   const calculateProgress = () => {
     if (tracks.length === 0) return 0;
-    return Math.round((matchedTrackIds.size / tracks.length) * 100);
+    // Count how many target tracks have a matching timestamp in matchedStatus
+    const matchedCount = tracks.filter(t => matchedStatus[t.id]).length;
+    return Math.round((matchedCount / tracks.length) * 100);
   };
 
   const handleSync = async () => {
@@ -48,26 +53,34 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
       // Pass the apiKey to the service
       const recentTracks = await fetchRecentTracks(username, apiKey);
       
-      const newMatches = new Set<string>();
+      const newMatches: Record<string, string> = {};
 
       tracks.forEach(target => {
         // Normalize for loose comparison
         const tArtist = target.artist.toLowerCase();
         const tTitle = target.title.toLowerCase();
 
-        const found = recentTracks.some(recent => {
+        // Use find instead of some to get the track data
+        const foundTrack = recentTracks.find(recent => {
           const rArtist = recent.artist['#text'].toLowerCase();
           const rTitle = recent.name.toLowerCase();
-          // Check if target matches recent
           return rArtist.includes(tArtist) && rTitle.includes(tTitle);
         });
 
-        if (found) {
-          newMatches.add(target.id);
+        if (foundTrack) {
+          let timeDisplay = 'Just now';
+          
+          if (foundTrack.date) {
+            timeDisplay = foundTrack.date['#text'];
+          } else if (foundTrack['@attr']?.nowplaying === 'true') {
+            timeDisplay = 'Listening Now...';
+          }
+          
+          newMatches[target.id] = timeDisplay;
         }
       });
 
-      setMatchedTrackIds(newMatches);
+      setMatchedStatus(newMatches);
       setSynced(true);
     } catch (err: any) {
       setError(err.message || 'Failed to sync. Please check username/API Key.');
@@ -172,7 +185,9 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
                 <div className="text-center text-gray-500 py-4">Admin hasn't set any tracks yet.</div>
             ) : (
                 tracks.map((track) => {
-                const isListened = matchedTrackIds.has(track.id);
+                const matchTime = matchedStatus[track.id];
+                const isListened = !!matchTime;
+                
                 return (
                     <div 
                     key={track.id} 
@@ -187,6 +202,14 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
                         {track.title}
                         </div>
                         <div className="text-sm text-gray-400">{track.artist}</div>
+                        
+                        {/* Display Play Time */}
+                        {isListened && (
+                            <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-neon-green/90 font-mono tracking-wide">
+                                <Clock size={10} />
+                                <span>{matchTime}</span>
+                            </div>
+                        )}
                     </div>
                     <div className="flex-shrink-0">
                         {isListened ? (
