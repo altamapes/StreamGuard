@@ -24,6 +24,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
   const [isVerifying, setIsVerifying] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Check if defaults are actually present in the code
+  const hasDefaults = !!(DEFAULT_CLOUD_CONFIG.binId && DEFAULT_CLOUD_CONFIG.apiKey);
+
   useEffect(() => {
     // Load existing cloud config when panel opens
     const config = storageService.getCloudConfig();
@@ -78,16 +81,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
     }
   };
 
-  const handleDisconnectCloud = () => {
-    storageService.disconnectCloud();
-    setCloudConfig({ enabled: false, binId: '', apiKey: '' });
-    setSettingsMsg('Cloud Disconnected. Using Local Storage.');
-  };
-
-  const handleRestoreDefaults = () => {
-    if (confirm('This will reset your connection settings to the values in constants.ts. Continue?')) {
-        storageService.disconnectCloud(); // Clear local overrides
-        window.location.reload(); // Reload to force reading from defaults
+  const handleDisconnectOrReset = () => {
+    storageService.disconnectCloud(); // Clears LocalStorage
+    
+    if (hasDefaults) {
+        // If defaults exist, revert UI to defaults
+        setCloudConfig(DEFAULT_CLOUD_CONFIG);
+        setSettingsMsg('Reset to Default Configuration.');
+    } else {
+        // If no defaults, clear UI completely
+        setCloudConfig({ enabled: false, binId: '', apiKey: '' });
+        setSettingsMsg('Cloud Disconnected. Using Local Storage.');
     }
   };
 
@@ -135,9 +139,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
-
-  // Check if defaults are actually present in the code
-  const hasDefaults = DEFAULT_CLOUD_CONFIG.binId && DEFAULT_CLOUD_CONFIG.apiKey;
 
   return (
     <div className="w-full max-w-3xl mx-auto p-6 animate-fade-in">
@@ -246,18 +247,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
                     <Cloud /> Database Connection
                 </h3>
                 
-                {/* Default Config Detected Banner */}
+                {/* Default Config Banner */}
                 {hasDefaults && (
-                    <div className="mb-6 p-4 bg-blue-900/20 border border-blue-400/30 rounded-xl flex flex-col md:flex-row items-center justify-between gap-3">
+                    <div className="mb-6 p-4 bg-blue-900/20 border border-blue-400/30 rounded-xl flex items-center justify-between gap-3">
                         <div className="text-sm text-blue-200">
-                            <strong>System Default Found:</strong> Config is present in constants.ts.
+                            <strong>System Default Active:</strong> Using hardcoded connection keys.
                         </div>
-                        <button 
-                            onClick={handleRestoreDefaults}
-                            className="text-xs bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-white font-bold flex items-center gap-2 transition-colors"
-                        >
-                            <RefreshCw size={14} /> Use Default Connection
-                        </button>
                     </div>
                 )}
 
@@ -272,7 +267,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
                             type="text" 
                             value={cloudConfig.binId} 
                             onChange={(e) => setCloudConfig({...cloudConfig, binId: e.target.value})}
-                            className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:border-blue-500 focus:outline-none"
+                            className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:border-blue-500 focus:outline-none font-mono"
                             placeholder="e.g. 65d4f..."
                         />
                     </div>
@@ -282,7 +277,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
                             type="password" 
                             value={cloudConfig.apiKey} 
                             onChange={(e) => setCloudConfig({...cloudConfig, apiKey: e.target.value})}
-                            className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:border-blue-500 focus:outline-none"
+                            className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:border-blue-500 focus:outline-none font-mono"
                             placeholder="e.g. $2a$10$..."
                         />
                     </div>
@@ -299,10 +294,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
                         
                         {cloudConfig.enabled && !isVerifying && (
                             <button 
-                                onClick={handleDisconnectCloud}
-                                className="px-6 py-3 bg-red-900/50 hover:bg-red-900 text-red-300 rounded-xl font-bold transition-colors flex items-center gap-2"
+                                onClick={handleDisconnectOrReset}
+                                className={`px-6 py-3 rounded-xl font-bold transition-colors flex items-center gap-2 ${hasDefaults ? 'bg-yellow-600/50 text-yellow-200 hover:bg-yellow-600' : 'bg-red-900/50 text-red-300 hover:bg-red-900'}`}
                             >
-                                <CloudOff size={18} /> Disconnect
+                                {hasDefaults ? <RefreshCw size={18} /> : <CloudOff size={18} />}
+                                {hasDefaults ? 'Reset to Default' : 'Disconnect'}
                             </button>
                         )}
                     </div>
