@@ -3,7 +3,7 @@ import { LAST_FM_API_URL } from '../constants';
 
 interface LastFmResponse {
   recenttracks: {
-    track: LastFmTrack[];
+    track: LastFmTrack[] | LastFmTrack; // Could be array or single object
   };
 }
 
@@ -42,7 +42,11 @@ export const fetchRecentTracks = async (username: string, apiKey: string): Promi
         return [];
     }
     
-    return data.recenttracks.track;
+    // Fix: Last.fm returns a single object if only 1 track exists, instead of an array.
+    // We must normalize this to always be an array.
+    const tracks = data.recenttracks.track;
+    return Array.isArray(tracks) ? tracks : [tracks];
+
   } catch (error) {
     console.error('API Error:', error);
     throw error;

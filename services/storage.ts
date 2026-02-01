@@ -89,7 +89,15 @@ export const storageService = {
         
         const result = await response.json();
         // JSONBin v3 returns data inside a 'record' property
-        return result.record as AppData;
+        const record = result.record || {};
+        
+        // Normalize Data: Ensure arrays are actually arrays
+        return {
+            users: Array.isArray(record.users) ? record.users : [],
+            tracks: Array.isArray(record.tracks) ? record.tracks : (record.tracks || DEFAULT_TRACKS),
+            spotifyPlaylistId: record.spotifyPlaylistId || DEFAULT_SPOTIFY_ID
+        };
+
       } catch (e: any) {
         console.error("Cloud Fetch Error:", e);
         throw new Error(e.message || "Could not connect to Cloud Database.");
@@ -102,9 +110,26 @@ export const storageService = {
       const tracksStr = localStorage.getItem(STORAGE_KEY);
       const spotifyIdStr = localStorage.getItem(STORAGE_KEY_SPOTIFY);
       
+      let users = [];
+      let tracks = DEFAULT_TRACKS;
+
+      try {
+          if (usersStr) {
+              const parsed = JSON.parse(usersStr);
+              if (Array.isArray(parsed)) users = parsed;
+          }
+      } catch (e) { console.error("Error parsing local users", e); }
+
+      try {
+          if (tracksStr) {
+              const parsed = JSON.parse(tracksStr);
+              if (Array.isArray(parsed)) tracks = parsed;
+          }
+      } catch (e) { console.error("Error parsing local tracks", e); }
+      
       return {
-        users: usersStr ? JSON.parse(usersStr) : [],
-        tracks: tracksStr ? JSON.parse(tracksStr) : DEFAULT_TRACKS,
+        users,
+        tracks,
         spotifyPlaylistId: spotifyIdStr || DEFAULT_SPOTIFY_ID
       };
     }
@@ -154,13 +179,13 @@ export const storageService = {
 
   async getUsers(): Promise<User[]> {
     const data = await this._fetchFullData();
-    // Initialize empty users array if new bin
-    return data.users || [];
+    // Safety: ensure it is always an array
+    return Array.isArray(data.users) ? data.users : [];
   },
 
   async registerUser(newUser: User): Promise<User> {
     const data = await this._fetchFullData();
-    const users = data.users || [];
+    const users = Array.isArray(data.users) ? data.users : [];
     
     if (users.some(u => u.appUsername.toLowerCase() === newUser.appUsername.toLowerCase())) {
       throw new Error('Username already taken');
@@ -175,8 +200,9 @@ export const storageService = {
 
   async loginUser(username: string, password: string): Promise<User> {
     const data = await this._fetchFullData();
-    const users = data.users || [];
+    const users = Array.isArray(data.users) ? data.users : [];
     
+    // This .find is likely where "find is not a function" happened if users wasn't an array
     const user = users.find(u => 
       u.appUsername.toLowerCase() === username.toLowerCase() && 
       u.password === password
@@ -187,7 +213,7 @@ export const storageService = {
 
   async updateUserCheckIn(userId: string, dateString: string): Promise<User> {
     const data = await this._fetchFullData();
-    const users = data.users || [];
+    const users = Array.isArray(data.users) ? data.users : [];
     let updatedUser: User | null = null;
     
     const newUsers = users.map(u => {
@@ -208,7 +234,7 @@ export const storageService = {
 
   async getTracks(): Promise<TargetTrack[]> {
     const data = await this._fetchFullData();
-    return data.tracks || DEFAULT_TRACKS;
+    return Array.isArray(data.tracks) ? data.tracks : DEFAULT_TRACKS;
   },
 
   async saveTracks(tracks: TargetTrack[]): Promise<void> {
