@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User as UserIcon, Lock, Music, ArrowRight, LogIn, AlertTriangle, Cloud, CloudOff, Globe, Key, Settings } from 'lucide-react';
+import { User as UserIcon, Lock, Music, ArrowRight, LogIn, AlertTriangle, Cloud, CloudOff, Globe, Key, Settings, HelpCircle, ChevronDown, ChevronUp, PlayCircle, CheckCircle2, Link as LinkIcon, ExternalLink, PlusCircle } from 'lucide-react';
 import { User } from '../types';
 import { storageService } from '../services/storage';
 
@@ -12,6 +12,9 @@ interface AuthViewProps {
 export const AuthView: React.FC<AuthViewProps> = ({ onLogin, onRegister, onOpenAdmin }) => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Tutorial Toggle State
+  const [showTutorial, setShowTutorial] = useState(false);
   
   // Cloud Status (Read Only)
   const [cloudStatus, setCloudStatus] = useState<'DISCONNECTED' | 'CONNECTED'>('DISCONNECTED');
@@ -66,8 +69,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin, onRegister, onOpenA
   };
 
   return (
-    <div className="w-full max-w-md mx-auto p-4 animate-fade-in relative">
-      <div className="mb-8 text-center">
+    <div className="w-full max-w-md mx-auto p-4 animate-fade-in relative flex flex-col items-center">
+      <div className="mb-8 text-center w-full">
         <div className="mx-auto w-20 h-20 bg-gradient-to-br from-neon-purple to-blue-600 rounded-full flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(176,38,255,0.4)] relative group">
           <Music size={40} className="text-white relative z-10" />
           {cloudStatus === 'CONNECTED' && (
@@ -95,7 +98,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin, onRegister, onOpenA
         )}
       </div>
 
-      <div className="glass p-8 rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-white/10 relative">
+      <div className="glass p-8 rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-white/10 relative w-full">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-4">
             <div>
@@ -138,6 +141,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin, onRegister, onOpenA
                     value={lastFmUsername}
                     onChange={(e) => setLastFmUsername(e.target.value)}
                     className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-neon-green text-white placeholder-gray-600 transition-colors"
+                    placeholder="Your Last.fm ID"
                   />
                 </div>
               </div>
@@ -150,6 +154,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin, onRegister, onOpenA
                     value={lastFmApiKey}
                     onChange={(e) => setLastFmApiKey(e.target.value)}
                     className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-neon-green text-white placeholder-gray-600 transition-colors"
+                    placeholder="Paste API Key here"
                   />
                 </div>
               </div>
@@ -192,6 +197,140 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin, onRegister, onOpenA
             {isRegistering ? 'Already have an account? Login' : "Don't have an account? Register"}
           </button>
         </div>
+      </div>
+
+      {/* TUTORIAL SECTION */}
+      <div className="mt-8 w-full max-w-md">
+        <button 
+          onClick={() => setShowTutorial(!showTutorial)}
+          className="w-full flex items-center justify-center gap-2 text-gray-400 hover:text-white transition-all py-2 group"
+        >
+          <HelpCircle size={18} className="group-hover:text-neon-green transition-colors" />
+          <span className="text-sm font-medium">New here? How to Setup</span>
+          {showTutorial ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+
+        {showTutorial && (
+          <div className="glass mt-4 p-6 rounded-2xl animate-fade-in border border-white/5 shadow-lg">
+             <h3 className="text-lg font-bold text-white mb-6 text-center">Setup Guide (1 Time)</h3>
+             
+             <div className="space-y-6 relative">
+                 {/* Connecting Line */}
+                 <div className="absolute left-[15px] top-4 bottom-4 w-0.5 bg-gradient-to-b from-green-500 via-red-500 to-neon-purple opacity-30"></div>
+
+                 {/* Step 1: Spotify Account */}
+                 <div className="flex gap-4 relative z-10">
+                     <div className="w-8 h-8 rounded-full bg-[#16133a] text-green-500 flex items-center justify-center font-bold text-sm shrink-0 border border-[#1DB954] shadow-[0_0_10px_rgba(29,185,84,0.3)]">
+                        <Music size={14} />
+                     </div>
+                     <div className="flex-1">
+                         <h4 className="font-bold text-green-400 text-sm flex items-center gap-2">
+                             1. Create Spotify Account
+                         </h4>
+                         <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                             You need a Spotify account to stream the music.
+                         </p>
+                         <a 
+                            href="https://www.spotify.com/signup" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="mt-2 text-[10px] flex items-center gap-1 text-green-300 hover:text-white bg-green-900/20 px-2 py-1 rounded border border-green-500/20 w-fit"
+                        >
+                             <LinkIcon size={10} /> Sign Up Spotify
+                             <ExternalLink size={10} />
+                         </a>
+                     </div>
+                 </div>
+
+                 {/* Step 2: Last.fm Account */}
+                 <div className="flex gap-4 relative z-10">
+                     <div className="w-8 h-8 rounded-full bg-[#16133a] text-white flex items-center justify-center font-bold text-sm shrink-0 border border-white/30 shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+                        <PlusCircle size={14} />
+                     </div>
+                     <div className="flex-1">
+                         <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                             2. Create Last.fm Account
+                         </h4>
+                         <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                             Sign up for Last.fm to track your listening history.
+                         </p>
+                         <a 
+                            href="https://www.last.fm/join" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="mt-2 text-[10px] flex items-center gap-1 text-gray-300 hover:text-white bg-white/10 px-2 py-1 rounded border border-white/20 w-fit"
+                        >
+                             <LinkIcon size={10} /> Sign Up Last.fm
+                             <ExternalLink size={10} />
+                         </a>
+                     </div>
+                 </div>
+
+                 {/* Step 3: Connect Spotify */}
+                 <div className="flex gap-4 relative z-10">
+                     <div className="w-8 h-8 rounded-full bg-[#16133a] text-green-500 flex items-center justify-center font-bold text-sm shrink-0 border border-[#1DB954] shadow-[0_0_10px_rgba(29,185,84,0.3)]">
+                        <LinkIcon size={14} />
+                     </div>
+                     <div className="flex-1">
+                         <h4 className="font-bold text-green-400 text-sm flex items-center gap-2">
+                             3. Connect Spotify Scrobbling
+                         </h4>
+                         <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                             In Last.fm Settings, connect <strong>Spotify Scrobbling</strong>.
+                         </p>
+                         <a 
+                            href="https://www.last.fm/settings/applications" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="mt-2 text-[10px] flex items-center gap-1 text-green-300 hover:text-white bg-green-900/20 px-2 py-1 rounded border border-green-500/20 w-fit"
+                        >
+                             <LinkIcon size={10} /> Open Settings
+                             <ExternalLink size={10} />
+                         </a>
+                     </div>
+                 </div>
+
+                 {/* Step 4: API Key */}
+                 <div className="flex gap-4 relative z-10">
+                     <div className="w-8 h-8 rounded-full bg-[#16133a] text-red-500 flex items-center justify-center font-bold text-sm shrink-0 border border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]">
+                        <Key size={14} />
+                     </div>
+                     <div className="flex-1">
+                         <h4 className="font-bold text-red-400 text-sm flex items-center gap-2">
+                             4. Get API Key
+                         </h4>
+                         <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                             Create a user API account. Copy the <strong>API Key</strong>.
+                         </p>
+                         <a 
+                            href="https://www.last.fm/api/account/create" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="mt-2 text-[10px] flex items-center gap-1 text-red-300 hover:text-white bg-red-900/20 px-2 py-1 rounded border border-red-500/20 w-fit"
+                        >
+                             <LinkIcon size={10} /> Create API Account
+                             <ExternalLink size={10} />
+                         </a>
+                     </div>
+                 </div>
+
+                 {/* Step 5: Register */}
+                 <div className="flex gap-4 relative z-10">
+                     <div className="w-8 h-8 rounded-full bg-[#16133a] text-neon-purple flex items-center justify-center font-bold text-sm shrink-0 border border-neon-purple shadow-[0_0_10px_rgba(176,38,255,0.3)]">
+                        <LogIn size={14} />
+                     </div>
+                     <div>
+                         <h4 className="font-bold text-neon-purple text-sm flex items-center gap-2">
+                             5. Register Here
+                         </h4>
+                         <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                             Paste your <strong>Last.fm Username</strong> and <strong>API Key</strong> in the form above.
+                         </p>
+                     </div>
+                 </div>
+             </div>
+          </div>
+        )}
       </div>
     </div>
   );
