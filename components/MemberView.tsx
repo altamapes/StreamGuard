@@ -30,12 +30,13 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
 
     // Check if user already checked in today
     const lastCheckInDate = localStorage.getItem(STORAGE_KEY_LAST_CHECKIN);
-    const todayDate = new Date().toLocaleDateString();
+    const todayDate = new Date().toLocaleDateString(); // Format: "MM/DD/YYYY" or local equivalent
 
+    // If the stored date matches today's date, keep them checked in.
+    // If dates differ (next day), this will remain false.
     if (lastCheckInDate === todayDate) {
       setHasCheckedInToday(true);
     } else {
-      // If dates don't match (e.g. it's a new day), we ensure state is false
       setHasCheckedInToday(false);
     }
   }, []);
@@ -102,7 +103,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
   };
 
   const handleClaim = () => {
-    // Save today's date
+    // Save today's date to localStorage
     const todayDate = new Date().toLocaleDateString();
     localStorage.setItem(STORAGE_KEY_LAST_CHECKIN, todayDate);
     
