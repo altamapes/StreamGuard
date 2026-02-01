@@ -12,3 +12,4 @@ export const DEFAULT_TRACKS: TargetTrack[] = [
 
 export const STORAGE_KEY = 'streamguard_playlist';
 export const STORAGE_KEY_USERS = 'streamguard_users_db'; // "Database" for users
+export const STORAGE_KEY_CLOUD = 'streamguard_cloud_config'; // Stores API keys locally

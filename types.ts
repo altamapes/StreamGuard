@@ -40,3 +40,14 @@ export interface User {
   lastFmApiKey: string;
   lastCheckInDate: string | null; // Stores the date string (e.g. "20/02/2024")
 }
+
+export interface CloudConfig {
+  enabled: boolean;
+  binId: string;
+  apiKey: string;
+}
+
+export interface AppData {
+  users: User[];
+  tracks: TargetTrack[];
+}
