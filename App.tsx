@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Unlock, X } from 'lucide-react';
 import { ViewMode, TargetTrack, User } from './types';
-import { DEFAULT_TRACKS, STORAGE_KEY, ADMIN_PIN, STORAGE_KEY_USERS } from './constants';
+import { ADMIN_PIN } from './constants';
 import { AdminPanel } from './components/AdminPanel';
 import { MemberView } from './components/MemberView';
 import { AuthView } from './components/AuthView';
+import { storageService } from './services/storage';
 
 function App() {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.AUTH);
   const [targetTracks, setTargetTracks] = useState<TargetTrack[]>([]);
-  
-  // User Management State
-  const [usersDb, setUsersDb] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // Pin Modal State
@@ -19,45 +17,37 @@ function App() {
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
 
-  // Initialize from LocalStorage
+  // Initialize Data
   useEffect(() => {
-    // Load Playlist
-    const storedTracks = localStorage.getItem(STORAGE_KEY);
-    if (storedTracks) {
-      try {
-        setTargetTracks(JSON.parse(storedTracks));
-      } catch (e) {
-        setTargetTracks(DEFAULT_TRACKS);
-      }
-    } else {
-      setTargetTracks(DEFAULT_TRACKS);
-    }
-
-    // Load Users Database
-    const storedUsers = localStorage.getItem(STORAGE_KEY_USERS);
-    if (storedUsers) {
-      try {
-        setUsersDb(JSON.parse(storedUsers));
-      } catch (e) {
-        setUsersDb([]);
-      }
-    }
+    loadData();
   }, []);
 
-  // Save to LocalStorage whenever tracks change
-  const handleSaveTracks = (newTracks: TargetTrack[]) => {
+  const loadData = async () => {
+    try {
+      const tracks = await storageService.getTracks();
+      setTargetTracks(tracks);
+    } catch (e) {
+      console.error("Failed to load data", e);
+    }
+  };
+
+  // Save tracks handler
+  const handleSaveTracks = async (newTracks: TargetTrack[]) => {
+    await storageService.saveTracks(newTracks);
     setTargetTracks(newTracks);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newTracks));
     alert('Playlist updated successfully!');
   };
 
   // Auth Handlers
-  const handleRegister = (newUser: User) => {
-    const updatedUsers = [...usersDb, newUser];
-    setUsersDb(updatedUsers);
-    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(updatedUsers));
-    setCurrentUser(newUser);
-    setViewMode(ViewMode.MEMBER);
+  const handleRegister = async (newUser: User) => {
+    try {
+      // In a real DB app, you'd send data to API here
+      await storageService.registerUser(newUser);
+      setCurrentUser(newUser);
+      setViewMode(ViewMode.MEMBER);
+    } catch (error: any) {
+      alert(error.message);
+    }
   };
 
   const handleLogin = (user: User) => {
@@ -70,24 +60,21 @@ function App() {
     setViewMode(ViewMode.AUTH);
   };
 
-  // Check-In Logic (Updates the specific user in the DB)
-  const handleUserCheckIn = () => {
+  // Check-In Logic
+  const handleUserCheckIn = async () => {
     if (!currentUser) return;
 
     const todayDate = new Date().toLocaleDateString();
     
-    // Create updated user object
-    const updatedUser = { ...currentUser, lastCheckInDate: todayDate };
-    
-    // Update State
-    setCurrentUser(updatedUser);
-
-    // Update DB
-    const updatedUsersDb = usersDb.map(u => 
-      u.id === currentUser.id ? updatedUser : u
-    );
-    setUsersDb(updatedUsersDb);
-    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(updatedUsersDb));
+    try {
+      // Update in DB (Simulated)
+      const updatedUser = await storageService.updateUserCheckIn(currentUser.id, todayDate);
+      
+      // Update Local State
+      setCurrentUser(updatedUser);
+    } catch (e) {
+      console.error("Check-in failed", e);
+    }
   };
 
   // Handle Admin Access
@@ -116,7 +103,6 @@ function App() {
         {viewMode === ViewMode.AUTH && (
           <AuthView 
             onLogin={handleLogin} 
-            usersDb={usersDb} 
             onRegister={handleRegister} 
           />
         )}

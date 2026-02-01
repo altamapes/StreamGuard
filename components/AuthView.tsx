@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
-import { User as UserIcon, Lock, Key, Music, ArrowRight, LogIn } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { User as UserIcon, Lock, Key, Music, ArrowRight, LogIn, Download, Upload, Settings, AlertTriangle, Check, X } from 'lucide-react';
 import { User } from '../types';
+import { storageService } from '../services/storage';
 
 interface AuthViewProps {
   onLogin: (user: User) => void;
-  usersDb: User[];
   onRegister: (newUser: User) => void;
+  // usersDb prop removed as the service handles it internally now
 }
 
-export const AuthView: React.FC<AuthViewProps> = ({ onLogin, usersDb, onRegister }) => {
+export const AuthView: React.FC<AuthViewProps> = ({ onLogin, onRegister }) => {
   const [isRegistering, setIsRegistering] = useState(false);
+  const [showDataModal, setShowDataModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Form States
   const [appUsername, setAppUsername] = useState('');
@@ -18,49 +21,116 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin, usersDb, onRegister
   const [lastFmApiKey, setLastFmApiKey] = useState('');
   
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setIsLoading(true);
 
     if (!appUsername || !password) {
       setError('Username and Password are required.');
+      setIsLoading(false);
       return;
     }
 
-    if (isRegistering) {
-      // REGISTER LOGIC
-      if (usersDb.some(u => u.appUsername.toLowerCase() === appUsername.toLowerCase())) {
-        setError('Username already taken.');
-        return;
-      }
-      
-      const newUser: User = {
-        id: Date.now().toString(),
-        appUsername,
-        password,
-        lastFmUsername: lastFmUsername || '', // Allow empty for mock testing if needed
-        lastFmApiKey: lastFmApiKey || '',
-        lastCheckInDate: null
-      };
+    try {
+      if (isRegistering) {
+        // REGISTER LOGIC via Service
+        const newUser: User = {
+          id: Date.now().toString(),
+          appUsername,
+          password,
+          lastFmUsername: lastFmUsername || '', 
+          lastFmApiKey: lastFmApiKey || '',
+          lastCheckInDate: null
+        };
 
-      onRegister(newUser);
-    } else {
-      // LOGIN LOGIC
-      const foundUser = usersDb.find(
-        u => u.appUsername.toLowerCase() === appUsername.toLowerCase() && u.password === password
-      );
-
-      if (foundUser) {
-        onLogin(foundUser);
+        // Service throws error if username taken
+        await storageService.registerUser(newUser);
+        
+        // Pass up to parent to set session
+        onRegister(newUser);
       } else {
-        setError('Invalid username or password.');
+        // LOGIN LOGIC via Service
+        const user = await storageService.loginUser(appUsername, password);
+        onLogin(user);
       }
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // --- DATA MANAGEMENT LOGIC ---
+
+  const handleExportData = () => {
+    try {
+      const data = storageService.exportData();
+      
+      const backupData = {
+        version: 1,
+        timestamp: new Date().toISOString(),
+        users: data.users ? JSON.parse(data.users) : [],
+        playlist: data.tracks ? JSON.parse(data.tracks) : [],
+      };
+
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `streamguard_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      setSuccessMsg('Backup downloaded successfully!');
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err) {
+      setError('Failed to generate backup.');
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+
+        if (!json.users && !json.playlist) {
+            throw new Error('Invalid backup file format');
+        }
+
+        if (window.confirm('This will overwrite current data. Are you sure?')) {
+            storageService.importData(
+              json.users ? JSON.stringify(json.users) : null,
+              json.playlist ? JSON.stringify(json.playlist) : null
+            );
+            
+            alert('Data restored! The page will now reload.');
+            window.location.reload();
+        }
+      } catch (err) {
+        setError('Invalid backup file. Could not restore.');
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   return (
-    <div className="w-full max-w-md mx-auto p-4 animate-fade-in">
+    <div className="w-full max-w-md mx-auto p-4 animate-fade-in relative">
       <div className="mb-8 text-center">
         <div className="mx-auto w-20 h-20 bg-gradient-to-br from-neon-purple to-blue-600 rounded-full flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(176,38,255,0.4)]">
           <Music size={40} className="text-white" />
@@ -73,10 +143,19 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin, usersDb, onRegister
         </p>
       </div>
 
-      <div className="glass p-8 rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-white/10">
+      <div className="glass p-8 rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-white/10 relative">
+        
+        {/* Settings/Data Button */}
+        <button 
+            onClick={() => setShowDataModal(true)}
+            className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors p-2"
+            title="Data Management"
+        >
+            <Settings size={20} />
+        </button>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           
-          {/* App Login Credentials */}
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">Username</label>
@@ -106,7 +185,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin, usersDb, onRegister
             </div>
           </div>
 
-          {/* Extended Fields for Registration */}
           {isRegistering && (
             <div className="pt-4 border-t border-white/10 space-y-4 animate-fade-in">
               <p className="text-xs text-neon-green font-mono text-center mb-2">LAST.FM CONFIGURATION</p>
@@ -135,28 +213,24 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin, usersDb, onRegister
                     placeholder="32-character API Key"
                   />
                 </div>
-                <p className="text-[10px] text-gray-500 mt-1 pl-1">
-                  We save this securely in your browser so you don't type it again.
-                </p>
               </div>
             </div>
           )}
 
           {error && (
-            <div className="text-red-400 text-sm text-center bg-red-900/20 p-2 rounded-lg border border-red-500/20">
-              {error}
+            <div className="text-red-400 text-sm text-center bg-red-900/20 p-2 rounded-lg border border-red-500/20 flex items-center justify-center gap-2">
+              <AlertTriangle size={16} /> {error}
             </div>
           )}
 
           <button 
             type="submit"
-            className="w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all mt-4 bg-gradient-to-r from-neon-purple to-pink-600 text-white shadow-[0_0_20px_rgba(176,38,255,0.4)] hover:scale-[1.02]"
+            disabled={isLoading}
+            className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all mt-4 text-white shadow-[0_0_20px_rgba(176,38,255,0.4)] ${
+              isLoading ? 'bg-gray-600 cursor-not-allowed' : 'bg-gradient-to-r from-neon-purple to-pink-600 hover:scale-[1.02]'
+            }`}
           >
-            {isRegistering ? (
-              <>Create Account <ArrowRight size={20} /></>
-            ) : (
-              <>Login to Stream <LogIn size={20} /></>
-            )}
+            {isLoading ? 'Processing...' : (isRegistering ? <><ArrowRight size={20} /> Create Account</> : <><LogIn size={20} /> Login</>)}
           </button>
         </form>
 
@@ -172,6 +246,61 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin, usersDb, onRegister
           </button>
         </div>
       </div>
+
+      {showDataModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fade-in">
+             <div className="glass max-w-sm w-full p-6 rounded-3xl relative border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                <button 
+                    onClick={() => {
+                        setShowDataModal(false);
+                        setSuccessMsg(null);
+                        setError(null);
+                    }}
+                    className="absolute top-4 right-4 text-gray-400 hover:text-white"
+                >
+                    <X size={20} />
+                </button>
+
+                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <Settings className="text-neon-purple" /> Data Backup
+                </h3>
+                <p className="text-sm text-gray-400 mb-6">
+                    Because this app runs in your browser without a server, use this to move your data to another device.
+                </p>
+
+                <div className="space-y-3">
+                    <button 
+                        onClick={handleExportData}
+                        className="w-full py-3 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl flex items-center justify-center gap-2 transition-all"
+                    >
+                        <Download size={18} className="text-neon-green" /> Backup My Data
+                    </button>
+
+                    <div className="relative">
+                        <input 
+                            type="file" 
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            accept=".json"
+                            className="hidden"
+                        />
+                        <button 
+                            onClick={handleImportClick}
+                            className="w-full py-3 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl flex items-center justify-center gap-2 transition-all"
+                        >
+                            <Upload size={18} className="text-blue-400" /> Restore Backup
+                        </button>
+                    </div>
+                </div>
+
+                {successMsg && (
+                    <div className="mt-4 text-green-400 text-sm text-center bg-green-900/20 p-2 rounded-lg flex items-center justify-center gap-2">
+                        <Check size={16} /> {successMsg}
+                    </div>
+                )}
+             </div>
+        </div>
+      )}
     </div>
   );
 };
