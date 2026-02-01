@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { User as UserIcon, Lock, Music, ArrowRight, LogIn, AlertTriangle, Cloud, CloudOff, Globe, Key } from 'lucide-react';
+import { User as UserIcon, Lock, Music, ArrowRight, LogIn, AlertTriangle, Cloud, CloudOff, Globe, Key, Settings } from 'lucide-react';
 import { User } from '../types';
 import { storageService } from '../services/storage';
 
 interface AuthViewProps {
   onLogin: (user: User) => void;
   onRegister: (newUser: User) => void;
+  onOpenAdmin: () => void;
 }
 
-export const AuthView: React.FC<AuthViewProps> = ({ onLogin, onRegister }) => {
+export const AuthView: React.FC<AuthViewProps> = ({ onLogin, onRegister, onOpenAdmin }) => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -156,8 +157,19 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin, onRegister }) => {
           )}
 
           {error && (
-            <div className="text-red-400 text-sm text-center bg-red-900/20 p-2 rounded-lg border border-red-500/20 flex items-center justify-center gap-2">
-              <AlertTriangle size={16} /> {error}
+            <div className="text-red-400 text-sm text-center bg-red-900/20 p-3 rounded-xl border border-red-500/20 flex flex-col items-center justify-center gap-2 animate-fade-in">
+              <div className="flex items-center gap-2 font-bold"><AlertTriangle size={18} /> Error</div>
+              <div>{error}</div>
+              
+              {/* Emergency Fix Button */}
+              {(error.includes('Cloud') || error.includes('Auth')) && (
+                <button 
+                  onClick={onOpenAdmin}
+                  className="mt-2 flex items-center gap-1 text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-blue-300 hover:text-white transition-all border border-white/10"
+                >
+                  <Settings size={12} /> Fix Connection (Admin)
+                </button>
+              )}
             </div>
           )}
 

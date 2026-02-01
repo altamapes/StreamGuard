@@ -104,6 +104,7 @@ function App() {
           <AuthView 
             onLogin={handleLogin} 
             onRegister={handleRegister} 
+            onOpenAdmin={() => setIsPinModalOpen(true)}
           />
         )}
 
