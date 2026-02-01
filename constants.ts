@@ -5,12 +5,13 @@ export const LAST_FM_API_URL = 'https://ws.audioscrobbler.com/2.0/';
 export const ADMIN_PIN = '1234';
 
 // --- KONFIGURASI DEFAULT (HARDCODED) ---
-// Isi ini agar user lain/incognito otomatis terkoneksi.
-// Jika kosong, user harus input manual via Admin Panel.
+// PENTING: Isi Bin ID dan API Key di dalam tanda kutip di bawah ini.
+// Setelah diisi, lakukan DEPLOY ke Vercel agar bisa diakses orang lain/incognito.
+
 export const DEFAULT_CLOUD_CONFIG: CloudConfig = {
-  enabled: true, // Set true agar otomatis aktif
-  binId: '', // CONTOH: '65d4f8...' (Tempel Bin ID Anda di antara tanda kutip)
-  apiKey: '' // CONTOH: '$2a$10$...' (Tempel X-Master-Key Anda di antara tanda kutip)
+  enabled: true, 
+  binId: '', // CONTOH: '697f91db43b1c97be95dac80' (MASUKKAN BIN ID ANDA DI SINI)
+  apiKey: '' // CONTOH: '$2a$10$iKUJm6gbggRWTuoxqK61Ie2g8JfOSKgKQusqyRbI5LUzdMSgDvfum' (MASUKKAN API KEY ANDA DI SINI)
 };
 
 export const DEFAULT_TRACKS: TargetTrack[] = [
@@ -20,5 +21,5 @@ export const DEFAULT_TRACKS: TargetTrack[] = [
 ];
 
 export const STORAGE_KEY = 'streamguard_playlist';
-export const STORAGE_KEY_USERS = 'streamguard_users_db'; // "Database" for users
-export const STORAGE_KEY_CLOUD = 'streamguard_cloud_config'; // Stores API keys locally
+export const STORAGE_KEY_USERS = 'streamguard_users_db'; 
+export const STORAGE_KEY_CLOUD = 'streamguard_cloud_config'; 

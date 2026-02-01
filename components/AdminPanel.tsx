@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Save, ArrowLeft, Plus, Settings, Database, Cloud, CloudOff, Download, Upload, ListMusic, Loader2 } from 'lucide-react';
+import { Trash2, Save, ArrowLeft, Plus, Settings, Database, Cloud, CloudOff, Download, Upload, ListMusic, Loader2, RefreshCw } from 'lucide-react';
 import { TargetTrack, CloudConfig } from '../types';
 import { storageService } from '../services/storage';
+import { DEFAULT_CLOUD_CONFIG } from '../constants';
 
 interface AdminPanelProps {
   tracks: TargetTrack[];
@@ -83,6 +84,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
     setSettingsMsg('Cloud Disconnected. Using Local Storage.');
   };
 
+  const handleRestoreDefaults = () => {
+    if (confirm('This will reset your connection settings to the values in constants.ts. Continue?')) {
+        storageService.disconnectCloud(); // Clear local overrides
+        window.location.reload(); // Reload to force reading from defaults
+    }
+  };
+
   const handleExportData = () => {
     try {
       const data = storageService.exportData();
@@ -127,6 +135,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  // Check if defaults are actually present in the code
+  const hasDefaults = DEFAULT_CLOUD_CONFIG.binId && DEFAULT_CLOUD_CONFIG.apiKey;
 
   return (
     <div className="w-full max-w-3xl mx-auto p-6 animate-fade-in">
@@ -234,6 +245,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
                 <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-blue-400">
                     <Cloud /> Database Connection
                 </h3>
+                
+                {/* Default Config Detected Banner */}
+                {hasDefaults && (
+                    <div className="mb-6 p-4 bg-blue-900/20 border border-blue-400/30 rounded-xl flex flex-col md:flex-row items-center justify-between gap-3">
+                        <div className="text-sm text-blue-200">
+                            <strong>System Default Found:</strong> Config is present in constants.ts.
+                        </div>
+                        <button 
+                            onClick={handleRestoreDefaults}
+                            className="text-xs bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-white font-bold flex items-center gap-2 transition-colors"
+                        >
+                            <RefreshCw size={14} /> Use Default Connection
+                        </button>
+                    </div>
+                )}
+
                 <p className="text-sm text-gray-400 mb-6">
                     Connect to JSONBin.io to allow users to sync data across different devices.
                 </p>
