@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Unlock, X } from 'lucide-react';
-import { ViewMode, TargetTrack } from './types';
-import { DEFAULT_TRACKS, STORAGE_KEY, ADMIN_PIN } from './constants';
+import { ViewMode, TargetTrack, User } from './types';
+import { DEFAULT_TRACKS, STORAGE_KEY, ADMIN_PIN, STORAGE_KEY_USERS } from './constants';
 import { AdminPanel } from './components/AdminPanel';
 import { MemberView } from './components/MemberView';
+import { AuthView } from './components/AuthView';
 
 function App() {
-  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.MEMBER);
+  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.AUTH);
   const [targetTracks, setTargetTracks] = useState<TargetTrack[]>([]);
   
+  // User Management State
+  const [usersDb, setUsersDb] = useState<User[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
   // Pin Modal State
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [pinInput, setPinInput] = useState('');
@@ -16,15 +21,26 @@ function App() {
 
   // Initialize from LocalStorage
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
+    // Load Playlist
+    const storedTracks = localStorage.getItem(STORAGE_KEY);
+    if (storedTracks) {
       try {
-        setTargetTracks(JSON.parse(stored));
+        setTargetTracks(JSON.parse(storedTracks));
       } catch (e) {
         setTargetTracks(DEFAULT_TRACKS);
       }
     } else {
       setTargetTracks(DEFAULT_TRACKS);
+    }
+
+    // Load Users Database
+    const storedUsers = localStorage.getItem(STORAGE_KEY_USERS);
+    if (storedUsers) {
+      try {
+        setUsersDb(JSON.parse(storedUsers));
+      } catch (e) {
+        setUsersDb([]);
+      }
     }
   }, []);
 
@@ -33,6 +49,45 @@ function App() {
     setTargetTracks(newTracks);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newTracks));
     alert('Playlist updated successfully!');
+  };
+
+  // Auth Handlers
+  const handleRegister = (newUser: User) => {
+    const updatedUsers = [...usersDb, newUser];
+    setUsersDb(updatedUsers);
+    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(updatedUsers));
+    setCurrentUser(newUser);
+    setViewMode(ViewMode.MEMBER);
+  };
+
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
+    setViewMode(ViewMode.MEMBER);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setViewMode(ViewMode.AUTH);
+  };
+
+  // Check-In Logic (Updates the specific user in the DB)
+  const handleUserCheckIn = () => {
+    if (!currentUser) return;
+
+    const todayDate = new Date().toLocaleDateString();
+    
+    // Create updated user object
+    const updatedUser = { ...currentUser, lastCheckInDate: todayDate };
+    
+    // Update State
+    setCurrentUser(updatedUser);
+
+    // Update DB
+    const updatedUsersDb = usersDb.map(u => 
+      u.id === currentUser.id ? updatedUser : u
+    );
+    setUsersDb(updatedUsersDb);
+    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(updatedUsersDb));
   };
 
   // Handle Admin Access
@@ -57,19 +112,35 @@ function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col items-center justify-start pt-10 px-4 pb-20 z-10">
-        {viewMode === ViewMode.ADMIN ? (
+        
+        {viewMode === ViewMode.AUTH && (
+          <AuthView 
+            onLogin={handleLogin} 
+            usersDb={usersDb} 
+            onRegister={handleRegister} 
+          />
+        )}
+
+        {viewMode === ViewMode.ADMIN && (
           <AdminPanel 
             tracks={targetTracks} 
             onSave={handleSaveTracks} 
-            onExit={() => setViewMode(ViewMode.MEMBER)} 
+            onExit={() => setViewMode(currentUser ? ViewMode.MEMBER : ViewMode.AUTH)} 
           />
-        ) : (
-          <MemberView tracks={targetTracks} />
+        )}
+
+        {viewMode === ViewMode.MEMBER && currentUser && (
+          <MemberView 
+            tracks={targetTracks} 
+            currentUser={currentUser}
+            onCheckIn={handleUserCheckIn}
+            onLogout={handleLogout}
+          />
         )}
       </main>
 
-      {/* Admin Trigger (Bottom Left) */}
-      {viewMode === ViewMode.MEMBER && (
+      {/* Admin Trigger (Bottom Left) - Always visible unless inside Admin panel */}
+      {viewMode !== ViewMode.ADMIN && (
         <button
           onClick={() => setIsPinModalOpen(true)}
           className="fixed bottom-6 left-6 p-3 rounded-full bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white transition-all z-50 group"

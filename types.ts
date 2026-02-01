@@ -22,6 +22,7 @@ export interface LastFmTrack {
 }
 
 export enum ViewMode {
+  AUTH = 'AUTH',
   MEMBER = 'MEMBER',
   ADMIN = 'ADMIN'
 }
@@ -29,4 +30,13 @@ export enum ViewMode {
 export interface CheckStatus {
   trackId: string;
   isListened: boolean;
+}
+
+export interface User {
+  id: string;
+  appUsername: string; // Username for login
+  password: string;    // Password for login (simple storage)
+  lastFmUsername: string;
+  lastFmApiKey: string;
+  lastCheckInDate: string | null; // Stores the date string (e.g. "20/02/2024")
 }

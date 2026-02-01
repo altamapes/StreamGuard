@@ -1,79 +1,61 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Key, User, X, Clock, CalendarCheck } from 'lucide-react';
-import { TargetTrack } from '../types';
+import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Clock, CalendarCheck, LogOut, User as UserIcon, X } from 'lucide-react';
+import { TargetTrack, User } from '../types';
 import { fetchRecentTracks } from '../services/lastFmService';
-import { STORAGE_KEY_API_KEY, STORAGE_KEY_LAST_CHECKIN } from '../constants';
 
 interface MemberViewProps {
   tracks: TargetTrack[];
+  currentUser: User;
+  onCheckIn: () => void; // Parent handles the DB update
+  onLogout: () => void;
 }
 
-export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
-  const [username, setUsername] = useState('');
-  const [apiKey, setApiKey] = useState('');
+export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, onCheckIn, onLogout }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [synced, setSynced] = useState(false);
   
-  // Changed from Set<string> to Record<string, string> to store the time
   const [matchedStatus, setMatchedStatus] = useState<Record<string, string>>({});
-  
   const [error, setError] = useState<string | null>(null);
   const [showReward, setShowReward] = useState(false);
   const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
 
-  // Load API Key and Check-in status on mount
+  // Initialize Check-in status based on currentUser data
   useEffect(() => {
-    const storedKey = localStorage.getItem(STORAGE_KEY_API_KEY);
-    if (storedKey) {
-      setApiKey(storedKey);
-    }
-
-    // Check if user already checked in today
-    const lastCheckInDate = localStorage.getItem(STORAGE_KEY_LAST_CHECKIN);
-    const todayDate = new Date().toLocaleDateString(); // Format: "MM/DD/YYYY" or local equivalent
-
-    // If the stored date matches today's date, keep them checked in.
-    // If dates differ (next day), this will remain false.
-    if (lastCheckInDate === todayDate) {
+    const todayDate = new Date().toLocaleDateString();
+    
+    // Check user's specific last check-in date
+    if (currentUser.lastCheckInDate === todayDate) {
       setHasCheckedInToday(true);
     } else {
       setHasCheckedInToday(false);
     }
-  }, []);
+  }, [currentUser]); // Re-run if user changes or updates
 
   const calculateProgress = () => {
     if (tracks.length === 0) return 0;
-    // Count how many target tracks have a matching timestamp in matchedStatus
     const matchedCount = tracks.filter(t => matchedStatus[t.id]).length;
     return Math.round((matchedCount / tracks.length) * 100);
   };
 
   const handleSync = async () => {
-    if (!username) {
-      setError('Please enter a Last.fm username');
+    if (!currentUser.lastFmUsername) {
+      setError('No Last.fm username found in profile.');
       return;
     }
     
     setIsLoading(true);
     setError(null);
 
-    // Save API Key to local storage
-    if (apiKey) {
-      localStorage.setItem(STORAGE_KEY_API_KEY, apiKey);
-    }
-
     try {
-      // Pass the apiKey to the service
-      const recentTracks = await fetchRecentTracks(username, apiKey);
+      // Use credentials from the logged-in user
+      const recentTracks = await fetchRecentTracks(currentUser.lastFmUsername, currentUser.lastFmApiKey);
       
       const newMatches: Record<string, string> = {};
 
       tracks.forEach(target => {
-        // Normalize for loose comparison
         const tArtist = target.artist.toLowerCase();
         const tTitle = target.title.toLowerCase();
 
-        // Use find instead of some to get the track data
         const foundTrack = recentTracks.find(recent => {
           const rArtist = recent.artist['#text'].toLowerCase();
           const rTitle = recent.name.toLowerCase();
@@ -82,13 +64,11 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
 
         if (foundTrack) {
           let timeDisplay = 'Just now';
-          
           if (foundTrack.date) {
             timeDisplay = foundTrack.date['#text'];
           } else if (foundTrack['@attr']?.nowplaying === 'true') {
             timeDisplay = 'Listening Now...';
           }
-          
           newMatches[target.id] = timeDisplay;
         }
       });
@@ -96,17 +76,15 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
       setMatchedStatus(newMatches);
       setSynced(true);
     } catch (err: any) {
-      setError(err.message || 'Failed to sync. Please check username/API Key.');
+      setError(err.message || 'Failed to sync. Please check API Key in your profile.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleClaim = () => {
-    // Save today's date to localStorage
-    const todayDate = new Date().toLocaleDateString();
-    localStorage.setItem(STORAGE_KEY_LAST_CHECKIN, todayDate);
-    
+    // Call parent to update database
+    onCheckIn(); 
     setHasCheckedInToday(true);
     setShowReward(true);
   };
@@ -114,7 +92,6 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
   const progress = calculateProgress();
   const isComplete = progress === 100 && tracks.length > 0;
 
-  // Render button text and style logic
   const renderButton = () => {
     if (hasCheckedInToday) {
       return (
@@ -123,7 +100,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
           className="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 bg-green-900/20 text-green-400 border border-green-500/30 cursor-not-allowed opacity-80"
         >
           <CalendarCheck size={24} />
-          Check-In Complete for Today
+          Checked In for Today
         </button>
       );
     }
@@ -153,63 +130,53 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
 
   return (
     <div className="w-full max-w-md mx-auto p-4 flex flex-col items-center">
-      {/* Header */}
-      <div className="mb-8 text-center">
-        <h1 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-neon-green to-blue-400 mb-2 drop-shadow-sm">
-          StreamGuard
-        </h1>
-        <p className="text-purple-200 opacity-80 font-medium">Community Check Dashboard</p>
+      
+      {/* User Header */}
+      <div className="w-full flex justify-between items-center mb-6 bg-white/5 p-4 rounded-2xl border border-white/10">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center font-bold text-lg uppercase">
+            {currentUser.appUsername.charAt(0)}
+          </div>
+          <div>
+            <div className="text-sm text-gray-400">Logged in as</div>
+            <div className="font-bold text-white leading-none">{currentUser.appUsername}</div>
+            <div className="text-xs text-neon-green mt-1 flex items-center gap-1">
+              <UserIcon size={10} /> {currentUser.lastFmUsername}
+            </div>
+          </div>
+        </div>
+        <button 
+          onClick={onLogout}
+          className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
+          title="Logout"
+        >
+          <LogOut size={20} />
+        </button>
       </div>
 
-      {/* Input Section */}
-      <div className="w-full glass p-6 rounded-2xl mb-6 shadow-[0_0_30px_rgba(0,0,0,0.3)] space-y-4">
-        
-        {/* Username Input */}
-        <div>
-          <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider flex items-center gap-1">
-            <User size={12} /> Last.fm Username
-          </label>
-          <input 
-            type="text" 
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="e.g. user123"
-            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-neon-green text-white placeholder-gray-500 transition-colors"
-          />
-        </div>
+      <div className="mb-4 text-center">
+        <h1 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-neon-green to-blue-400 drop-shadow-sm">
+          StreamGuard
+        </h1>
+      </div>
 
-        {/* API Key Input */}
-        <div>
-          <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider flex items-center gap-1">
-             <Key size={12} /> Last.fm API Key
-          </label>
-          <input 
-            type="password" 
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="Enter your API Key"
-            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-neon-purple text-white placeholder-gray-500 transition-colors"
-          />
-          <p className="text-[10px] text-gray-500 mt-1">
-            Don't have one? <a href="https://www.last.fm/api/account/create" target="_blank" rel="noreferrer" className="text-neon-purple hover:underline">Get it here</a>. Leave empty to use Mock Data.
-          </p>
-        </div>
-
+      {/* Sync Button Only (No Inputs) */}
+      <div className="w-full glass p-6 rounded-2xl mb-6 shadow-[0_0_30px_rgba(0,0,0,0.3)]">
         <button 
           onClick={handleSync}
           disabled={isLoading}
-          className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all mt-2 ${
+          className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
             isLoading 
               ? 'bg-gray-600 cursor-not-allowed' 
               : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]'
           }`}
         >
           <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
-          {isLoading ? 'Sync Progress' : 'Sync Progress'}
+          {isLoading ? 'Sync Progress' : 'Check Streams'}
         </button>
         
         {error && (
-            <div className="mt-3 flex items-center gap-2 text-red-400 text-sm bg-red-900/20 p-2 rounded-lg animate-pulse">
+            <div className="mt-3 flex items-center gap-2 text-red-400 text-sm bg-red-900/20 p-2 rounded-lg">
                 <AlertCircle size={16} />
                 {error}
             </div>
@@ -258,7 +225,6 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
                         </div>
                         <div className="text-sm text-gray-400">{track.artist}</div>
                         
-                        {/* Display Play Time */}
                         {isListened && (
                             <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-neon-green/90 font-mono tracking-wide">
                                 <Clock size={10} />
@@ -279,7 +245,6 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
             )}
           </div>
 
-          {/* Dynamic Action Button */}
           {renderButton()}
 
         </div>
@@ -304,7 +269,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
                     Check-In Complete!
                 </h2>
                 <p className="text-gray-300 mb-8 font-medium">
-                    You've streamed all target tracks today. Great job keeping the community active!
+                    See you tomorrow, {currentUser.appUsername}!
                 </p>
                 
                 <button
