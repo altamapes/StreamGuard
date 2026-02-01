@@ -19,6 +19,10 @@ export const DEFAULT_TRACKS: TargetTrack[] = [
   { id: '3', artist: 'Arctic Monkeys', title: 'Do I Wanna Know?' },
 ];
 
+// Default playlist (Global Top 50 or similar) if none set
+export const DEFAULT_SPOTIFY_ID = '37i9dQZF1DXcBWIGoYBM5M'; 
+
 export const STORAGE_KEY = 'streamguard_playlist';
 export const STORAGE_KEY_USERS = 'streamguard_users_db'; 
 export const STORAGE_KEY_CLOUD = 'streamguard_cloud_config';
+export const STORAGE_KEY_SPOTIFY = 'streamguard_spotify_id';

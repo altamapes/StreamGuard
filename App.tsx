@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Unlock, X } from 'lucide-react';
 import { ViewMode, TargetTrack, User } from './types';
-import { ADMIN_PIN } from './constants';
+import { ADMIN_PIN, DEFAULT_SPOTIFY_ID } from './constants';
 import { AdminPanel } from './components/AdminPanel';
 import { MemberView } from './components/MemberView';
 import { AuthView } from './components/AuthView';
@@ -11,6 +11,7 @@ function App() {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.AUTH);
   const [targetTracks, setTargetTracks] = useState<TargetTrack[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [spotifyId, setSpotifyId] = useState(DEFAULT_SPOTIFY_ID);
 
   // Pin Modal State
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
@@ -25,7 +26,9 @@ function App() {
   const loadData = async () => {
     try {
       const tracks = await storageService.getTracks();
+      const sId = await storageService.getSpotifyId();
       setTargetTracks(tracks);
+      setSpotifyId(sId);
     } catch (e) {
       console.error("Failed to load data", e);
     }
@@ -36,6 +39,12 @@ function App() {
     await storageService.saveTracks(newTracks);
     setTargetTracks(newTracks);
     alert('Playlist updated successfully!');
+  };
+
+  // Save Spotify ID handler
+  const handleSaveSpotify = async (newId: string) => {
+    await storageService.saveSpotifyId(newId);
+    setSpotifyId(newId);
   };
 
   // Auth Handlers
@@ -110,8 +119,10 @@ function App() {
 
         {viewMode === ViewMode.ADMIN && (
           <AdminPanel 
-            tracks={targetTracks} 
-            onSave={handleSaveTracks} 
+            tracks={targetTracks}
+            spotifyId={spotifyId}
+            onSave={handleSaveTracks}
+            onSaveSpotify={handleSaveSpotify} 
             onExit={() => setViewMode(currentUser ? ViewMode.MEMBER : ViewMode.AUTH)} 
           />
         )}
@@ -120,6 +131,7 @@ function App() {
           <MemberView 
             tracks={targetTracks} 
             currentUser={currentUser}
+            spotifyId={spotifyId}
             onCheckIn={handleUserCheckIn}
             onLogout={handleLogout}
           />

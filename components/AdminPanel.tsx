@@ -1,22 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Save, ArrowLeft, Plus, Settings, Database, Cloud, CloudOff, Download, Upload, ListMusic, Loader2, RefreshCw, Users, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Trash2, Save, ArrowLeft, Plus, Settings, Database, Cloud, CloudOff, Download, Upload, ListMusic, Loader2, RefreshCw, Users, CheckCircle2, Clock, Music } from 'lucide-react';
 import { TargetTrack, CloudConfig, User } from '../types';
 import { storageService } from '../services/storage';
 import { DEFAULT_CLOUD_CONFIG } from '../constants';
 
 interface AdminPanelProps {
   tracks: TargetTrack[];
+  spotifyId: string;
   onSave: (tracks: TargetTrack[]) => void;
+  onSaveSpotify: (id: string) => void;
   onExit: () => void;
 }
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }) => {
+export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, spotifyId, onSave, onSaveSpotify, onExit }) => {
   const [activeTab, setActiveTab] = useState<'playlist' | 'users' | 'settings'>('playlist');
   
   // Playlist State
   const [localTracks, setLocalTracks] = useState<TargetTrack[]>(tracks);
   const [newArtist, setNewArtist] = useState('');
   const [newTitle, setNewTitle] = useState('');
+  
+  // Spotify State
+  const [localSpotifyId, setLocalSpotifyId] = useState(spotifyId);
+  const [spotifyInput, setSpotifyInput] = useState(`https://open.spotify.com/playlist/${spotifyId}`);
 
   // Users State
   const [usersList, setUsersList] = useState<User[]>([]);
@@ -77,6 +83,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
 
   const handleSavePlaylist = () => {
     onSave(localTracks);
+  };
+
+  const handleSpotifyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setSpotifyInput(val);
+    
+    // Extract ID from URL
+    // Supports: https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M?si=...
+    const match = val.match(/playlist\/([a-zA-Z0-9]+)/);
+    if (match && match[1]) {
+        setLocalSpotifyId(match[1]);
+    } else if (!val.includes('http')) {
+        // Assume user pasted just the ID
+        setLocalSpotifyId(val);
+    }
+  };
+
+  const handleSaveSpotify = () => {
+      onSaveSpotify(localSpotifyId);
+      alert('Spotify Playlist updated!');
   };
 
   // --- SETTINGS LOGIC ---
@@ -209,6 +235,32 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
 
       {activeTab === 'playlist' && (
         <>
+            {/* Spotify Config */}
+            <div className="glass p-6 rounded-2xl mb-8 border border-green-500/20 shadow-lg shadow-green-900/20">
+                <h3 className="text-lg font-semibold text-green-400 mb-4 flex items-center gap-2">
+                    <Music size={20} /> Spotify Integration
+                </h3>
+                <div className="flex flex-col md:flex-row gap-4">
+                    <input 
+                        type="text" 
+                        placeholder="Paste Spotify Playlist Link (e.g. https://open.spotify.com/playlist/...)"
+                        value={spotifyInput}
+                        onChange={handleSpotifyChange}
+                        className="flex-[2] bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-green-500 transition-colors text-sm"
+                    />
+                    <button 
+                        onClick={handleSaveSpotify}
+                        className="bg-green-600 hover:bg-green-500 text-white rounded-xl px-6 py-3 font-bold transition-all flex items-center justify-center gap-2"
+                    >
+                        <Save size={18} /> Update Playlist
+                    </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                    This playlist will be embedded in the Member View for streaming.
+                    Current ID: <span className="font-mono text-gray-400">{localSpotifyId}</span>
+                </p>
+            </div>
+
             {/* Add New Track Form */}
             <div className="glass p-6 rounded-2xl mb-8 shadow-lg shadow-purple-900/20">
                 <h3 className="text-lg font-semibold text-purple-300 mb-4">Add Target Track</h3>

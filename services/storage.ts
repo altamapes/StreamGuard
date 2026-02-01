@@ -1,5 +1,5 @@
 import { User, TargetTrack, CloudConfig, AppData } from '../types';
-import { STORAGE_KEY, STORAGE_KEY_USERS, STORAGE_KEY_CLOUD, DEFAULT_TRACKS, DEFAULT_CLOUD_CONFIG } from '../constants';
+import { STORAGE_KEY, STORAGE_KEY_USERS, STORAGE_KEY_CLOUD, STORAGE_KEY_SPOTIFY, DEFAULT_TRACKS, DEFAULT_CLOUD_CONFIG, DEFAULT_SPOTIFY_ID } from '../constants';
 
 // --- CLOUD STORAGE SERVICE (JSONBin.io Adapter) ---
 
@@ -63,7 +63,7 @@ export const storageService = {
 
   // --- INTERNAL HELPERS ---
 
-  // Fetches the entire DB (Users + Tracks)
+  // Fetches the entire DB (Users + Tracks + Settings)
   async _fetchFullData(): Promise<AppData> {
     const config = this.getCloudConfig();
     
@@ -100,9 +100,12 @@ export const storageService = {
     else {
       const usersStr = localStorage.getItem(STORAGE_KEY_USERS);
       const tracksStr = localStorage.getItem(STORAGE_KEY);
+      const spotifyIdStr = localStorage.getItem(STORAGE_KEY_SPOTIFY);
+      
       return {
         users: usersStr ? JSON.parse(usersStr) : [],
-        tracks: tracksStr ? JSON.parse(tracksStr) : DEFAULT_TRACKS
+        tracks: tracksStr ? JSON.parse(tracksStr) : DEFAULT_TRACKS,
+        spotifyPlaylistId: spotifyIdStr || DEFAULT_SPOTIFY_ID
       };
     }
   },
@@ -131,6 +134,7 @@ export const storageService = {
         // Also update local cache
         localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(data.users));
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data.tracks));
+        if (data.spotifyPlaylistId) localStorage.setItem(STORAGE_KEY_SPOTIFY, data.spotifyPlaylistId);
 
       } catch (e) {
         console.error("Cloud Save Error:", e);
@@ -142,6 +146,7 @@ export const storageService = {
     else {
       localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(data.users));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data.tracks));
+      if (data.spotifyPlaylistId) localStorage.setItem(STORAGE_KEY_SPOTIFY, data.spotifyPlaylistId);
     }
   },
 
@@ -211,12 +216,25 @@ export const storageService = {
     await this._saveFullData({ ...data, tracks });
   },
 
+  // --- SPOTIFY CONFIG ---
+
+  async getSpotifyId(): Promise<string> {
+    const data = await this._fetchFullData();
+    return data.spotifyPlaylistId || DEFAULT_SPOTIFY_ID;
+  },
+
+  async saveSpotifyId(id: string): Promise<void> {
+    const data = await this._fetchFullData();
+    await this._saveFullData({ ...data, spotifyPlaylistId: id });
+  },
+
   // --- BACKUP UTILS (Frontend Only) ---
   
   exportData() {
     return {
       users: localStorage.getItem(STORAGE_KEY_USERS),
-      tracks: localStorage.getItem(STORAGE_KEY)
+      tracks: localStorage.getItem(STORAGE_KEY),
+      spotify: localStorage.getItem(STORAGE_KEY_SPOTIFY)
     };
   },
 

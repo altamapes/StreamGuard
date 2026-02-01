@@ -50,4 +50,5 @@ export interface CloudConfig {
 export interface AppData {
   users: User[];
   tracks: TargetTrack[];
+  spotifyPlaylistId?: string; // New field for Spotify Integration
 }

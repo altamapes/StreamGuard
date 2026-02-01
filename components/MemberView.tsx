@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Clock, CalendarCheck, LogOut, User as UserIcon, X } from 'lucide-react';
+import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Clock, CalendarCheck, LogOut, User as UserIcon, X, Music } from 'lucide-react';
 import { TargetTrack, User } from '../types';
 import { fetchRecentTracks } from '../services/lastFmService';
 
 interface MemberViewProps {
   tracks: TargetTrack[];
   currentUser: User;
+  spotifyId: string; // Add this prop
   onCheckIn: () => void; // Parent handles the DB update
   onLogout: () => void;
 }
 
-export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, onCheckIn, onLogout }) => {
+export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spotifyId, onCheckIn, onLogout }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [synced, setSynced] = useState(false);
   
@@ -181,6 +182,26 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, onC
                 {error}
             </div>
         )}
+        
+        {/* Spotify Embed */}
+        <div className="mt-6 pt-6 border-t border-white/10">
+            <h4 className="text-xs text-gray-400 font-bold uppercase mb-3 flex items-center gap-2">
+                <Music size={12} className="text-green-500" /> Target Playlist
+            </h4>
+            <div className="rounded-xl overflow-hidden bg-black/40 shadow-inner">
+                <iframe 
+                    style={{ borderRadius: '12px' }} 
+                    src={`https://open.spotify.com/embed/playlist/${spotifyId}?utm_source=generator&theme=0`} 
+                    width="100%" 
+                    height="152" 
+                    frameBorder="0" 
+                    allowFullScreen 
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                    loading="lazy"
+                    title="Spotify Player"
+                ></iframe>
+            </div>
+        </div>
       </div>
 
       {synced && (
@@ -220,17 +241,15 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, onC
                     }`}
                     >
                     <div className="flex-1 pr-4">
-                        <div className={`font-bold ${isListened ? 'text-green-300' : 'text-white'}`}>
-                        {track.title}
+                        <div className={`font-bold flex flex-wrap items-center gap-2 ${isListened ? 'text-green-300' : 'text-white'}`}>
+                        <span>{track.title}</span>
+                        {isListened && (
+                             <span className="text-[10px] font-normal text-neon-green bg-green-900/40 px-2 py-0.5 rounded-full flex items-center gap-1 border border-green-500/20">
+                                <Clock size={10} /> {matchTime}
+                             </span>
+                        )}
                         </div>
                         <div className="text-sm text-gray-400">{track.artist}</div>
-                        
-                        {isListened && (
-                            <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-neon-green/90 font-mono tracking-wide">
-                                <Clock size={10} />
-                                <span>{matchTime}</span>
-                            </div>
-                        )}
                     </div>
                     <div className="flex-shrink-0">
                         {isListened ? (
