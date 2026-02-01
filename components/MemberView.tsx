@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Key, User, X, Clock } from 'lucide-react';
+import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Key, User, X, Clock, CalendarCheck } from 'lucide-react';
 import { TargetTrack } from '../types';
 import { fetchRecentTracks } from '../services/lastFmService';
-import { STORAGE_KEY_API_KEY } from '../constants';
+import { STORAGE_KEY_API_KEY, STORAGE_KEY_LAST_CHECKIN } from '../constants';
 
 interface MemberViewProps {
   tracks: TargetTrack[];
@@ -19,12 +19,24 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
   
   const [error, setError] = useState<string | null>(null);
   const [showReward, setShowReward] = useState(false);
+  const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
 
-  // Load API Key from local storage on mount
+  // Load API Key and Check-in status on mount
   useEffect(() => {
     const storedKey = localStorage.getItem(STORAGE_KEY_API_KEY);
     if (storedKey) {
       setApiKey(storedKey);
+    }
+
+    // Check if user already checked in today
+    const lastCheckInDate = localStorage.getItem(STORAGE_KEY_LAST_CHECKIN);
+    const todayDate = new Date().toLocaleDateString();
+
+    if (lastCheckInDate === todayDate) {
+      setHasCheckedInToday(true);
+    } else {
+      // If dates don't match (e.g. it's a new day), we ensure state is false
+      setHasCheckedInToday(false);
     }
   }, []);
 
@@ -90,11 +102,53 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
   };
 
   const handleClaim = () => {
+    // Save today's date
+    const todayDate = new Date().toLocaleDateString();
+    localStorage.setItem(STORAGE_KEY_LAST_CHECKIN, todayDate);
+    
+    setHasCheckedInToday(true);
     setShowReward(true);
   };
 
   const progress = calculateProgress();
   const isComplete = progress === 100 && tracks.length > 0;
+
+  // Render button text and style logic
+  const renderButton = () => {
+    if (hasCheckedInToday) {
+      return (
+        <button 
+          disabled
+          className="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 bg-green-900/20 text-green-400 border border-green-500/30 cursor-not-allowed opacity-80"
+        >
+          <CalendarCheck size={24} />
+          Check-In Complete for Today
+        </button>
+      );
+    }
+
+    if (isComplete) {
+      return (
+        <button 
+          onClick={handleClaim}
+          className="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all duration-500 bg-gradient-to-r from-neon-purple to-pink-600 text-white shadow-[0_0_30px_rgba(176,38,255,0.6)] scale-100 hover:scale-[1.02] cursor-pointer"
+        >
+          <Trophy size={24} className="text-yellow-300" />
+          CLAIM DAILY CHECK-IN
+        </button>
+      );
+    }
+
+    return (
+      <button 
+        disabled
+        className="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 bg-white/5 text-gray-500 cursor-not-allowed border border-white/5"
+      >
+        <Trophy size={24} />
+        Complete 100% to Check-In
+      </button>
+    );
+  };
 
   return (
     <div className="w-full max-w-md mx-auto p-4 flex flex-col items-center">
@@ -224,19 +278,9 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks }) => {
             )}
           </div>
 
-          {/* Daily Check-In Button */}
-          <button 
-            onClick={handleClaim}
-            disabled={!isComplete}
-            className={`w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all duration-500 ${
-              isComplete 
-                ? 'bg-gradient-to-r from-neon-purple to-pink-600 text-white shadow-[0_0_30px_rgba(176,38,255,0.6)] scale-100 hover:scale-[1.02] cursor-pointer' 
-                : 'bg-white/5 text-gray-500 cursor-not-allowed border border-white/5'
-            }`}
-          >
-            <Trophy size={24} className={isComplete ? 'text-yellow-300' : ''} />
-            {isComplete ? 'CLAIM DAILY CHECK-IN' : 'Complete 100% to Check-In'}
-          </button>
+          {/* Dynamic Action Button */}
+          {renderButton()}
+
         </div>
       )}
 
