@@ -47,8 +47,18 @@ export interface CloudConfig {
   apiKey: string;
 }
 
+export interface DayConfig {
+  tracks: TargetTrack[];
+  spotifyId: string;
+}
+
+// Key 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+export type WeeklySchedule = Record<number, DayConfig>;
+
 export interface AppData {
   users: User[];
-  tracks: TargetTrack[];
-  spotifyPlaylistId?: string; // New field for Spotify Integration
+  tracks: TargetTrack[]; // Legacy fallback
+  spotifyPlaylistId?: string; // Legacy fallback
+  weeklySchedule?: WeeklySchedule; // New Weekly System
+  adminPin?: string; // Custom Admin PIN
 }

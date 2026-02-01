@@ -1,5 +1,5 @@
-import { User, TargetTrack, CloudConfig, AppData } from '../types';
-import { STORAGE_KEY, STORAGE_KEY_USERS, STORAGE_KEY_CLOUD, STORAGE_KEY_SPOTIFY, DEFAULT_TRACKS, DEFAULT_CLOUD_CONFIG, DEFAULT_SPOTIFY_ID } from '../constants';
+import { User, TargetTrack, CloudConfig, AppData, WeeklySchedule, DayConfig } from '../types';
+import { STORAGE_KEY, STORAGE_KEY_USERS, STORAGE_KEY_CLOUD, STORAGE_KEY_SPOTIFY, DEFAULT_TRACKS, DEFAULT_CLOUD_CONFIG, DEFAULT_SPOTIFY_ID, ADMIN_PIN } from '../constants';
 
 // --- CLOUD STORAGE SERVICE (JSONBin.io Adapter) ---
 
@@ -15,7 +15,6 @@ export const storageService = {
     }
 
     // 2. Jika LocalStorage kosong, gunakan Default Config dari constants.ts
-    // Ini agar user baru/incognito langsung terkoneksi
     if (DEFAULT_CLOUD_CONFIG.binId && DEFAULT_CLOUD_CONFIG.apiKey) {
       return DEFAULT_CLOUD_CONFIG;
     }
@@ -29,9 +28,6 @@ export const storageService = {
 
   disconnectCloud() {
     localStorage.removeItem(STORAGE_KEY_CLOUD);
-    // Note: Jika DEFAULT_CLOUD_CONFIG diisi di constants.ts, 
-    // aplikasi akan tetap mencoba connect menggunakan default tersebut 
-    // meskipun user menekan disconnect (karena logika fallback di getCloudConfig).
   },
 
   // Verify connection validity before saving
@@ -63,7 +59,6 @@ export const storageService = {
 
   // --- INTERNAL HELPERS ---
 
-  // Fetches the entire DB (Users + Tracks + Settings)
   async _fetchFullData(): Promise<AppData> {
     const config = this.getCloudConfig();
     
@@ -88,14 +83,14 @@ export const storageService = {
         }
         
         const result = await response.json();
-        // JSONBin v3 returns data inside a 'record' property
         const record = result.record || {};
         
-        // Normalize Data: Ensure arrays are actually arrays
         return {
             users: Array.isArray(record.users) ? record.users : [],
             tracks: Array.isArray(record.tracks) ? record.tracks : (record.tracks || DEFAULT_TRACKS),
-            spotifyPlaylistId: record.spotifyPlaylistId || DEFAULT_SPOTIFY_ID
+            spotifyPlaylistId: record.spotifyPlaylistId || DEFAULT_SPOTIFY_ID,
+            weeklySchedule: record.weeklySchedule || {},
+            adminPin: record.adminPin || ADMIN_PIN
         };
 
       } catch (e: any) {
@@ -109,33 +104,29 @@ export const storageService = {
       const usersStr = localStorage.getItem(STORAGE_KEY_USERS);
       const tracksStr = localStorage.getItem(STORAGE_KEY);
       const spotifyIdStr = localStorage.getItem(STORAGE_KEY_SPOTIFY);
+      const scheduleStr = localStorage.getItem('streamguard_schedule');
+      const pinStr = localStorage.getItem('streamguard_admin_pin');
       
       let users = [];
       let tracks = DEFAULT_TRACKS;
+      let weeklySchedule = {};
 
       try {
-          if (usersStr) {
-              const parsed = JSON.parse(usersStr);
-              if (Array.isArray(parsed)) users = parsed;
-          }
-      } catch (e) { console.error("Error parsing local users", e); }
-
-      try {
-          if (tracksStr) {
-              const parsed = JSON.parse(tracksStr);
-              if (Array.isArray(parsed)) tracks = parsed;
-          }
-      } catch (e) { console.error("Error parsing local tracks", e); }
+          if (usersStr) users = JSON.parse(usersStr) || [];
+          if (tracksStr) tracks = JSON.parse(tracksStr) || DEFAULT_TRACKS;
+          if (scheduleStr) weeklySchedule = JSON.parse(scheduleStr) || {};
+      } catch (e) { console.error("Error parsing local data", e); }
       
       return {
         users,
         tracks,
-        spotifyPlaylistId: spotifyIdStr || DEFAULT_SPOTIFY_ID
+        spotifyPlaylistId: spotifyIdStr || DEFAULT_SPOTIFY_ID,
+        weeklySchedule,
+        adminPin: pinStr || ADMIN_PIN
       };
     }
   },
 
-  // Saves the entire DB
   async _saveFullData(data: AppData): Promise<void> {
     const config = this.getCloudConfig();
 
@@ -156,10 +147,8 @@ export const storageService = {
 
         if (!response.ok) throw new Error(`Cloud Save Failed (${response.status})`);
         
-        // Also update local cache
-        localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(data.users));
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data.tracks));
-        if (data.spotifyPlaylistId) localStorage.setItem(STORAGE_KEY_SPOTIFY, data.spotifyPlaylistId);
+        // Update local cache
+        this._updateLocalCache(data);
 
       } catch (e) {
         console.error("Cloud Save Error:", e);
@@ -169,17 +158,22 @@ export const storageService = {
     
     // 2. LOCAL MODE
     else {
-      localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(data.users));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data.tracks));
-      if (data.spotifyPlaylistId) localStorage.setItem(STORAGE_KEY_SPOTIFY, data.spotifyPlaylistId);
+      this._updateLocalCache(data);
     }
   },
 
-  // --- PUBLIC METHODS (Abstracted) ---
+  _updateLocalCache(data: AppData) {
+    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(data.users));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data.tracks));
+    if (data.spotifyPlaylistId) localStorage.setItem(STORAGE_KEY_SPOTIFY, data.spotifyPlaylistId);
+    if (data.weeklySchedule) localStorage.setItem('streamguard_schedule', JSON.stringify(data.weeklySchedule));
+    if (data.adminPin) localStorage.setItem('streamguard_admin_pin', data.adminPin);
+  },
+
+  // --- PUBLIC METHODS ---
 
   async getUsers(): Promise<User[]> {
     const data = await this._fetchFullData();
-    // Safety: ensure it is always an array
     return Array.isArray(data.users) ? data.users : [];
   },
 
@@ -202,7 +196,6 @@ export const storageService = {
     const data = await this._fetchFullData();
     const users = Array.isArray(data.users) ? data.users : [];
     
-    // This .find is likely where "find is not a function" happened if users wasn't an array
     const user = users.find(u => 
       u.appUsername.toLowerCase() === username.toLowerCase() && 
       u.password === password
@@ -230,42 +223,70 @@ export const storageService = {
     return updatedUser!;
   },
 
-  // --- TRACK METHODS ---
+  // --- SMART GETTERS FOR MEMBER VIEW ---
+  // Automatically returns TODAY's playlist if schedule exists
 
-  async getTracks(): Promise<TargetTrack[]> {
+  async getTodayData(): Promise<{ tracks: TargetTrack[], spotifyId: string }> {
     const data = await this._fetchFullData();
-    return Array.isArray(data.tracks) ? data.tracks : DEFAULT_TRACKS;
+    const todayIndex = new Date().getDay(); // 0 (Sun) to 6 (Sat)
+    
+    // Check if there is a schedule for today
+    if (data.weeklySchedule && data.weeklySchedule[todayIndex]) {
+        const todayConfig = data.weeklySchedule[todayIndex];
+        // If today has tracks, use them. Otherwise fallback to global default.
+        if (todayConfig.tracks && todayConfig.tracks.length > 0) {
+            return {
+                tracks: todayConfig.tracks,
+                spotifyId: todayConfig.spotifyId || data.spotifyPlaylistId || DEFAULT_SPOTIFY_ID
+            };
+        }
+    }
+
+    // Fallback to legacy single playlist
+    return {
+        tracks: Array.isArray(data.tracks) ? data.tracks : DEFAULT_TRACKS,
+        spotifyId: data.spotifyPlaylistId || DEFAULT_SPOTIFY_ID
+    };
   },
 
-  async saveTracks(tracks: TargetTrack[]): Promise<void> {
+  // --- ADMIN METHODS ---
+
+  async getWeeklySchedule(): Promise<WeeklySchedule> {
     const data = await this._fetchFullData();
-    await this._saveFullData({ ...data, tracks });
+    return data.weeklySchedule || {};
   },
 
-  // --- SPOTIFY CONFIG ---
-
-  async getSpotifyId(): Promise<string> {
+  async saveWeeklySchedule(schedule: WeeklySchedule): Promise<void> {
     const data = await this._fetchFullData();
-    return data.spotifyPlaylistId || DEFAULT_SPOTIFY_ID;
+    await this._saveFullData({ ...data, weeklySchedule: schedule });
   },
 
-  async saveSpotifyId(id: string): Promise<void> {
-    const data = await this._fetchFullData();
-    await this._saveFullData({ ...data, spotifyPlaylistId: id });
+  async getAdminPin(): Promise<string> {
+      const data = await this._fetchFullData();
+      return data.adminPin || ADMIN_PIN;
   },
 
-  // --- BACKUP UTILS (Frontend Only) ---
+  async saveAdminPin(newPin: string): Promise<void> {
+      const data = await this._fetchFullData();
+      await this._saveFullData({ ...data, adminPin: newPin });
+  },
+
+  // --- BACKUP UTILS ---
   
   exportData() {
     return {
       users: localStorage.getItem(STORAGE_KEY_USERS),
       tracks: localStorage.getItem(STORAGE_KEY),
-      spotify: localStorage.getItem(STORAGE_KEY_SPOTIFY)
+      spotify: localStorage.getItem(STORAGE_KEY_SPOTIFY),
+      schedule: localStorage.getItem('streamguard_schedule'),
+      adminPin: localStorage.getItem('streamguard_admin_pin')
     };
   },
 
-  importData(usersJson: string | null, tracksJson: string | null) {
+  importData(usersJson: string | null, tracksJson: string | null, scheduleJson: string | null, pinJson: string | null) {
     if (usersJson) localStorage.setItem(STORAGE_KEY_USERS, usersJson);
     if (tracksJson) localStorage.setItem(STORAGE_KEY, tracksJson);
+    if (scheduleJson) localStorage.setItem('streamguard_schedule', scheduleJson);
+    if (pinJson) localStorage.setItem('streamguard_admin_pin', pinJson);
   }
 };

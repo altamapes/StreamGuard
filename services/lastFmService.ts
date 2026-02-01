@@ -2,9 +2,11 @@ import { LastFmTrack } from '../types';
 import { LAST_FM_API_URL } from '../constants';
 
 interface LastFmResponse {
-  recenttracks: {
+  recenttracks?: {
     track: LastFmTrack[] | LastFmTrack; // Could be array or single object
   };
+  error?: number;
+  message?: string;
 }
 
 /**
@@ -25,19 +27,26 @@ export const fetchRecentTracks = async (username: string, apiKey: string): Promi
   }
 
   try {
-    const url = `${LAST_FM_API_URL}?method=user.getrecenttracks&user=${username}&api_key=${apiKey}&format=json&limit=50`;
-    const response = await fetch(url);
+    const encodedUser = encodeURIComponent(username.trim());
+    const cleanKey = apiKey.trim();
+    const url = `${LAST_FM_API_URL}?method=user.getrecenttracks&user=${encodedUser}&api_key=${cleanKey}&format=json&limit=50`;
     
-    if (!response.ok) {
-        if (response.status === 403) {
-            throw new Error('Invalid API Key');
-        }
-        throw new Error('Failed to fetch from Last.fm');
-    }
-
+    const response = await fetch(url);
     const data: LastFmResponse = await response.json();
     
-    // Safety check for empty data
+    if (!response.ok) {
+        // Last.fm typically returns { error: number, message: string } on failure
+        if (data.message) {
+            throw new Error(data.message);
+        }
+        throw new Error(`Last.fm API Error: ${response.status}`);
+    }
+
+    // Explicit check for API error codes even if HTTP 200 (legacy behavior safeguard)
+    if (data.error) {
+         throw new Error(data.message || 'Last.fm API returned an error');
+    }
+
     if (!data.recenttracks || !data.recenttracks.track) {
         return [];
     }
@@ -47,9 +56,10 @@ export const fetchRecentTracks = async (username: string, apiKey: string): Promi
     const tracks = data.recenttracks.track;
     return Array.isArray(tracks) ? tracks : [tracks];
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('API Error:', error);
-    throw error;
+    // Propagate the specific error message to the UI
+    throw new Error(error.message || 'Failed to connect to Last.fm');
   }
 };
 
@@ -66,8 +76,8 @@ const mockData: LastFmTrack[] = [
     album: { '#text': 'After Hours' }
   },
   {
-    name: 'Random Song',
-    artist: { '#text': 'Random Artist' },
-    album: { '#text': 'Random Album' }
+    name: 'Do I Wanna Know?',
+    artist: { '#text': 'Arctic Monkeys' },
+    album: { '#text': 'AM' }
   }
 ];

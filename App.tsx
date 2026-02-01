@@ -17,6 +17,7 @@ function App() {
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
+  const [currentAdminPin, setCurrentAdminPin] = useState(ADMIN_PIN);
 
   // Initialize Data
   useEffect(() => {
@@ -25,32 +26,28 @@ function App() {
 
   const loadData = async () => {
     try {
-      const tracks = await storageService.getTracks();
-      const sId = await storageService.getSpotifyId();
+      // getTodayData automatically handles determining the day of the week
+      const { tracks, spotifyId: sId } = await storageService.getTodayData();
       setTargetTracks(tracks);
       setSpotifyId(sId);
+
+      // Load Custom Admin PIN
+      const pin = await storageService.getAdminPin();
+      setCurrentAdminPin(pin);
     } catch (e) {
       console.error("Failed to load data", e);
     }
   };
 
-  // Save tracks handler
-  const handleSaveTracks = async (newTracks: TargetTrack[]) => {
-    await storageService.saveTracks(newTracks);
-    setTargetTracks(newTracks);
-    alert('Playlist updated successfully!');
-  };
-
-  // Save Spotify ID handler
-  const handleSaveSpotify = async (newId: string) => {
-    await storageService.saveSpotifyId(newId);
-    setSpotifyId(newId);
+  // Callback to reload data after Admin saves changes
+  const handleAdminExit = async () => {
+    await loadData(); // Refresh to see changes immediately (schedule & PIN)
+    setViewMode(currentUser ? ViewMode.MEMBER : ViewMode.AUTH);
   };
 
   // Auth Handlers
   const handleRegister = async (newUser: User) => {
     try {
-      // In a real DB app, you'd send data to API here
       await storageService.registerUser(newUser);
       setCurrentUser(newUser);
       setViewMode(ViewMode.MEMBER);
@@ -76,10 +73,7 @@ function App() {
     const todayDate = new Date().toLocaleDateString();
     
     try {
-      // Update in DB (Simulated)
       const updatedUser = await storageService.updateUserCheckIn(currentUser.id, todayDate);
-      
-      // Update Local State
       setCurrentUser(updatedUser);
     } catch (e) {
       console.error("Check-in failed", e);
@@ -89,7 +83,7 @@ function App() {
   // Handle Admin Access
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pinInput === ADMIN_PIN) {
+    if (pinInput === currentAdminPin) {
       setViewMode(ViewMode.ADMIN);
       setIsPinModalOpen(false);
       setPinInput('');
@@ -119,11 +113,7 @@ function App() {
 
         {viewMode === ViewMode.ADMIN && (
           <AdminPanel 
-            tracks={targetTracks}
-            spotifyId={spotifyId}
-            onSave={handleSaveTracks}
-            onSaveSpotify={handleSaveSpotify} 
-            onExit={() => setViewMode(currentUser ? ViewMode.MEMBER : ViewMode.AUTH)} 
+            onExit={handleAdminExit} 
           />
         )}
 
@@ -166,7 +156,7 @@ function App() {
             <form onSubmit={handlePinSubmit} className="flex flex-col gap-4">
               <input 
                 type="password" 
-                maxLength={4}
+                maxLength={8}
                 value={pinInput}
                 onChange={(e) => {
                   setPinInput(e.target.value);
@@ -177,7 +167,7 @@ function App() {
               />
               
               {pinError && (
-                <p className="text-red-500 text-xs text-center">Incorrect PIN. Try '1234'.</p>
+                <p className="text-red-500 text-xs text-center">Incorrect PIN.</p>
               )}
 
               <button 
