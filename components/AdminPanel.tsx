@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Save, ArrowLeft, Plus, Settings, Database, Cloud, CloudOff, Download, Upload, ListMusic, Loader2, RefreshCw } from 'lucide-react';
-import { TargetTrack, CloudConfig } from '../types';
+import { Trash2, Save, ArrowLeft, Plus, Settings, Database, Cloud, CloudOff, Download, Upload, ListMusic, Loader2, RefreshCw, Users, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { TargetTrack, CloudConfig, User } from '../types';
 import { storageService } from '../services/storage';
 import { DEFAULT_CLOUD_CONFIG } from '../constants';
 
@@ -11,12 +11,16 @@ interface AdminPanelProps {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }) => {
-  const [activeTab, setActiveTab] = useState<'playlist' | 'settings'>('playlist');
+  const [activeTab, setActiveTab] = useState<'playlist' | 'users' | 'settings'>('playlist');
   
   // Playlist State
   const [localTracks, setLocalTracks] = useState<TargetTrack[]>(tracks);
   const [newArtist, setNewArtist] = useState('');
   const [newTitle, setNewTitle] = useState('');
+
+  // Users State
+  const [usersList, setUsersList] = useState<User[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
   // Settings State
   const [cloudConfig, setCloudConfig] = useState<CloudConfig>({ enabled: false, binId: '', apiKey: '' });
@@ -34,6 +38,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
       setCloudConfig(config);
     }
   }, []);
+
+  // Fetch Users when switching to 'users' tab
+  useEffect(() => {
+    if (activeTab === 'users') {
+        fetchUsers();
+    }
+  }, [activeTab]);
+
+  const fetchUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+        const fetchedUsers = await storageService.getUsers();
+        setUsersList(fetchedUsers);
+    } catch (e) {
+        console.error("Failed to fetch users", e);
+    } finally {
+        setIsLoadingUsers(false);
+    }
+  };
 
   // --- PLAYLIST LOGIC ---
   const handleAddTrack = () => {
@@ -140,15 +163,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // Helper to check if user checked in today
+  const isCheckedInToday = (dateString: string | null) => {
+    if (!dateString) return false;
+    const today = new Date().toLocaleDateString();
+    return dateString === today;
+  };
+
   return (
-    <div className="w-full max-w-3xl mx-auto p-6 animate-fade-in">
-      <div className="flex items-center justify-between mb-8">
+    <div className="w-full max-w-4xl mx-auto p-4 md:p-6 animate-fade-in">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
           Admin Dashboard
         </h2>
         <button 
           onClick={onExit}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all text-sm font-medium"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all text-sm font-medium self-start md:self-auto"
         >
           <ArrowLeft size={16} />
           Exit Admin
@@ -156,18 +186,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 mb-6">
+      <div className="flex gap-2 md:gap-4 mb-6 overflow-x-auto">
         <button 
             onClick={() => setActiveTab('playlist')}
-            className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'playlist' ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'playlist' ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
         >
-            <ListMusic size={18} /> Playlist Manager
+            <ListMusic size={18} /> Playlist
+        </button>
+        <button 
+            onClick={() => setActiveTab('users')}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'users' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+        >
+            <Users size={18} /> User Activity
         </button>
         <button 
             onClick={() => setActiveTab('settings')}
-            className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'settings' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'settings' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
         >
-            <Settings size={18} /> System Settings
+            <Settings size={18} /> Settings
         </button>
       </div>
 
@@ -236,6 +272,78 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
                 </div>
             </div>
         </>
+      )}
+
+      {activeTab === 'users' && (
+        <div className="glass p-6 rounded-2xl shadow-lg shadow-emerald-900/20 animate-fade-in">
+           <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h3 className="text-xl font-bold text-emerald-400 flex items-center gap-2">
+                        <Users /> Community Activity
+                    </h3>
+                    <p className="text-sm text-gray-400">Monitor who has completed their daily check-in.</p>
+                </div>
+                <button 
+                    onClick={fetchUsers} 
+                    className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+                    title="Refresh List"
+                >
+                    <RefreshCw size={20} className={isLoadingUsers ? 'animate-spin' : ''} />
+                </button>
+           </div>
+
+           {isLoadingUsers ? (
+               <div className="py-12 flex justify-center text-emerald-500">
+                   <Loader2 className="animate-spin" size={32} />
+               </div>
+           ) : (
+               <div className="overflow-x-auto">
+                   <table className="w-full text-left border-collapse">
+                       <thead>
+                           <tr className="text-gray-400 border-b border-white/10 text-sm uppercase tracking-wider">
+                               <th className="pb-3 pl-2">App User</th>
+                               <th className="pb-3">Last.fm</th>
+                               <th className="pb-3 text-center">Today's Status</th>
+                               <th className="pb-3 text-right pr-2">Last Active</th>
+                           </tr>
+                       </thead>
+                       <tbody className="divide-y divide-white/5">
+                           {usersList.length === 0 ? (
+                               <tr>
+                                   <td colSpan={4} className="text-center py-8 text-gray-500 italic">
+                                       No registered users found.
+                                   </td>
+                               </tr>
+                           ) : (
+                               usersList.map((user) => {
+                                   const checkedIn = isCheckedInToday(user.lastCheckInDate);
+                                   return (
+                                       <tr key={user.id} className="group hover:bg-white/5 transition-colors">
+                                           <td className="py-4 pl-2 font-bold text-white">{user.appUsername}</td>
+                                           <td className="py-4 text-gray-400 text-sm font-mono">{user.lastFmUsername}</td>
+                                           <td className="py-4 flex justify-center">
+                                               {checkedIn ? (
+                                                   <div className="flex items-center gap-1 bg-green-900/30 text-green-400 px-3 py-1 rounded-full text-xs font-bold border border-green-500/20">
+                                                       <CheckCircle2 size={14} /> Checked In
+                                                   </div>
+                                               ) : (
+                                                   <div className="flex items-center gap-1 bg-red-900/20 text-gray-400 px-3 py-1 rounded-full text-xs font-bold border border-white/5">
+                                                        <Clock size={14} /> Pending
+                                                   </div>
+                                               )}
+                                           </td>
+                                           <td className="py-4 text-right pr-2 text-sm text-gray-500">
+                                               {user.lastCheckInDate || 'Never'}
+                                           </td>
+                                       </tr>
+                                   );
+                               })
+                           )}
+                       </tbody>
+                   </table>
+               </div>
+           )}
+        </div>
       )}
 
       {activeTab === 'settings' && (
