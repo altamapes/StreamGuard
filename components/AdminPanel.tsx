@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Save, ArrowLeft, Plus, Settings, Database, Cloud, CloudOff, Download, Upload, ListMusic } from 'lucide-react';
+import { Trash2, Save, ArrowLeft, Plus, Settings, Database, Cloud, CloudOff, Download, Upload, ListMusic, Loader2 } from 'lucide-react';
 import { TargetTrack, CloudConfig } from '../types';
 import { storageService } from '../services/storage';
 
@@ -20,6 +20,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
   // Settings State
   const [cloudConfig, setCloudConfig] = useState<CloudConfig>({ enabled: false, binId: '', apiKey: '' });
   const [settingsMsg, setSettingsMsg] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -52,12 +53,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
   };
 
   // --- SETTINGS LOGIC ---
-  const handleSaveCloudConfig = () => {
-    if (cloudConfig.binId && cloudConfig.apiKey) {
+  const handleSaveCloudConfig = async () => {
+    setSettingsMsg(null);
+    if (!cloudConfig.binId || !cloudConfig.apiKey) {
+        setSettingsMsg('Please enter both Bin ID and API Key.');
+        return;
+    }
+
+    setIsVerifying(true);
+    
+    // Verify connection first
+    const verification = await storageService.verifyConnection(cloudConfig.binId, cloudConfig.apiKey);
+    
+    setIsVerifying(false);
+
+    if (verification.valid) {
       const newConfig = { ...cloudConfig, enabled: true };
       storageService.saveCloudConfig(newConfig);
       setCloudConfig(newConfig);
-      setSettingsMsg('Cloud Connected! Please restart app or reload page.');
+      setSettingsMsg('SUCCESS: Cloud Connected! Please reload the app.');
+    } else {
+      setSettingsMsg(`ERROR: ${verification.message}`);
     }
   };
 
@@ -247,12 +263,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
                     <div className="flex gap-4 pt-2">
                         <button 
                             onClick={handleSaveCloudConfig}
-                            className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-white transition-colors"
+                            disabled={isVerifying}
+                            className={`flex-1 py-3 rounded-xl font-bold text-white transition-colors flex items-center justify-center gap-2 ${isVerifying ? 'bg-blue-800' : 'bg-blue-600 hover:bg-blue-500'}`}
                         >
+                            {isVerifying && <Loader2 className="animate-spin" size={18} />}
                             {cloudConfig.enabled ? 'Update Connection' : 'Connect Cloud'}
                         </button>
                         
-                        {cloudConfig.enabled && (
+                        {cloudConfig.enabled && !isVerifying && (
                             <button 
                                 onClick={handleDisconnectCloud}
                                 className="px-6 py-3 bg-red-900/50 hover:bg-red-900 text-red-300 rounded-xl font-bold transition-colors flex items-center gap-2"
@@ -296,7 +314,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ tracks, onSave, onExit }
             </div>
 
             {settingsMsg && (
-                <div className="p-4 bg-white/10 rounded-xl text-center text-white font-medium border border-white/20 animate-pulse">
+                <div className={`p-4 rounded-xl text-center font-medium border animate-pulse ${
+                    settingsMsg.includes('SUCCESS') ? 'bg-green-900/20 border-green-500/30 text-green-300' : 
+                    settingsMsg.includes('ERROR') ? 'bg-red-900/20 border-red-500/30 text-red-300' :
+                    'bg-white/10 border-white/20 text-white'
+                }`}>
                     {settingsMsg}
                 </div>
             )}

@@ -20,6 +20,33 @@ export const storageService = {
     localStorage.removeItem(STORAGE_KEY_CLOUD);
   },
 
+  // Verify connection validity before saving
+  async verifyConnection(binId: string, apiKey: string): Promise<{valid: boolean; message?: string}> {
+    try {
+        const cleanBinId = binId.trim();
+        const cleanApiKey = apiKey.trim();
+
+        if (!cleanBinId || !cleanApiKey) return { valid: false, message: 'Bin ID and API Key are required' };
+
+        const response = await fetch(`https://api.jsonbin.io/v3/b/${cleanBinId}/latest`, {
+          method: 'GET',
+          headers: {
+            'X-Master-Key': cleanApiKey,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) return { valid: true };
+        
+        if (response.status === 401 || response.status === 403) return { valid: false, message: 'Invalid API Key or Access Denied' };
+        if (response.status === 404) return { valid: false, message: 'Bin ID not found' };
+        
+        return { valid: false, message: `Connection failed: ${response.statusText}` };
+    } catch (e: any) {
+        return { valid: false, message: 'Network error or invalid configuration' };
+    }
+  },
+
   // --- INTERNAL HELPERS ---
 
   // Fetches the entire DB (Users + Tracks)
@@ -28,24 +55,30 @@ export const storageService = {
     
     // 1. CLOUD MODE
     if (config && config.enabled && config.binId && config.apiKey) {
+      const cleanBinId = config.binId.trim();
+      const cleanApiKey = config.apiKey.trim();
+
       try {
-        const response = await fetch(`https://api.jsonbin.io/v3/b/${config.binId}/latest`, {
+        const response = await fetch(`https://api.jsonbin.io/v3/b/${cleanBinId}/latest`, {
           method: 'GET',
           headers: {
-            'X-Master-Key': config.apiKey,
+            'X-Master-Key': cleanApiKey,
             'Content-Type': 'application/json'
           }
         });
 
-        if (!response.ok) throw new Error('Cloud Sync Failed');
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) throw new Error('Cloud Auth Failed: Check API Key');
+            if (response.status === 404) throw new Error('Cloud Error: Bin ID not found');
+            throw new Error(`Cloud Sync Failed (${response.status})`);
+        }
         
         const result = await response.json();
         // JSONBin v3 returns data inside a 'record' property
         return result.record as AppData;
-      } catch (e) {
+      } catch (e: any) {
         console.error("Cloud Fetch Error:", e);
-        // Fallback to local if cloud fails (optional strategy) or throw
-        throw new Error("Could not connect to Cloud Database. Check your internet or keys.");
+        throw new Error(e.message || "Could not connect to Cloud Database.");
       }
     } 
     
@@ -66,19 +99,22 @@ export const storageService = {
 
     // 1. CLOUD MODE
     if (config && config.enabled && config.binId && config.apiKey) {
+       const cleanBinId = config.binId.trim();
+       const cleanApiKey = config.apiKey.trim();
+       
        try {
-        const response = await fetch(`https://api.jsonbin.io/v3/b/${config.binId}`, {
+        const response = await fetch(`https://api.jsonbin.io/v3/b/${cleanBinId}`, {
           method: 'PUT',
           headers: {
-            'X-Master-Key': config.apiKey,
+            'X-Master-Key': cleanApiKey,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(data)
         });
 
-        if (!response.ok) throw new Error('Cloud Save Failed');
+        if (!response.ok) throw new Error(`Cloud Save Failed (${response.status})`);
         
-        // Also update local cache so we don't feel slow
+        // Also update local cache
         localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(data.users));
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data.tracks));
 
