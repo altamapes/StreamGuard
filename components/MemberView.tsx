@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Clock, CalendarCheck, LogOut, User as UserIcon, X, Music } from 'lucide-react';
+import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Clock, CalendarCheck, LogOut, User as UserIcon, X, Music, ExternalLink } from 'lucide-react';
 import { TargetTrack, User } from '../types';
 import { fetchRecentTracks } from '../services/lastFmService';
 
@@ -183,24 +183,21 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
             </div>
         )}
         
-        {/* Spotify Embed */}
+        {/* Spotify Link Button */}
         <div className="mt-6 pt-6 border-t border-white/10">
             <h4 className="text-xs text-gray-400 font-bold uppercase mb-3 flex items-center gap-2">
                 <Music size={12} className="text-green-500" /> Target Playlist
             </h4>
-            <div className="rounded-xl overflow-hidden bg-black/40 shadow-inner">
-                <iframe 
-                    style={{ borderRadius: '12px' }} 
-                    src={`https://open.spotify.com/embed/playlist/${spotifyId}?utm_source=generator&theme=0`} 
-                    width="100%" 
-                    height="152" 
-                    frameBorder="0" 
-                    allowFullScreen 
-                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
-                    loading="lazy"
-                    title="Spotify Player"
-                ></iframe>
-            </div>
+            <a 
+                href={`https://open.spotify.com/playlist/${spotifyId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 px-4 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold flex items-center justify-center gap-2 transition-all shadow-[0_0_15px_rgba(29,185,84,0.4)] hover:scale-[1.02]"
+            >
+                <Music size={20} fill="currentColor" />
+                Open Playlist in Spotify
+                <ExternalLink size={16} className="opacity-60 ml-1" />
+            </a>
         </div>
       </div>
 
