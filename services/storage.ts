@@ -1,5 +1,5 @@
 import { User, TargetTrack, CloudConfig, AppData } from '../types';
-import { STORAGE_KEY, STORAGE_KEY_USERS, STORAGE_KEY_CLOUD, DEFAULT_TRACKS } from '../constants';
+import { STORAGE_KEY, STORAGE_KEY_USERS, STORAGE_KEY_CLOUD, DEFAULT_TRACKS, DEFAULT_CLOUD_CONFIG } from '../constants';
 
 // --- CLOUD STORAGE SERVICE (JSONBin.io Adapter) ---
 
@@ -8,8 +8,19 @@ export const storageService = {
   // --- CONFIGURATION ---
   
   getCloudConfig(): CloudConfig | null {
+    // 1. Cek LocalStorage (Settingan Manual User)
     const stored = localStorage.getItem(STORAGE_KEY_CLOUD);
-    return stored ? JSON.parse(stored) : null;
+    if (stored) {
+      return JSON.parse(stored);
+    }
+
+    // 2. Jika LocalStorage kosong, gunakan Default Config dari constants.ts
+    // Ini agar user baru/incognito langsung terkoneksi
+    if (DEFAULT_CLOUD_CONFIG.binId && DEFAULT_CLOUD_CONFIG.apiKey) {
+      return DEFAULT_CLOUD_CONFIG;
+    }
+
+    return null;
   },
 
   saveCloudConfig(config: CloudConfig) {
@@ -18,6 +29,9 @@ export const storageService = {
 
   disconnectCloud() {
     localStorage.removeItem(STORAGE_KEY_CLOUD);
+    // Note: Jika DEFAULT_CLOUD_CONFIG diisi di constants.ts, 
+    // aplikasi akan tetap mencoba connect menggunakan default tersebut 
+    // meskipun user menekan disconnect (karena logika fallback di getCloudConfig).
   },
 
   // Verify connection validity before saving
