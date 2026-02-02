@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Clock, CalendarCheck, LogOut, User as UserIcon, X, Music, ExternalLink } from 'lucide-react';
+import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Clock, CalendarCheck, LogOut, User as UserIcon, X, Music, ExternalLink, Settings, Edit2, Save, Key, Lock, Link as LinkIcon, Headphones, Mic2 } from 'lucide-react';
 import { TargetTrack, User } from '../types';
 import { fetchRecentTracks } from '../services/lastFmService';
+import { storageService } from '../services/storage';
 
 interface MemberViewProps {
   tracks: TargetTrack[];
   currentUser: User;
-  spotifyId: string; // Add this prop
-  onCheckIn: () => void; // Parent handles the DB update
+  spotifyId: string;
+  onCheckIn: () => void;
+  onUpdateUser: (user: User) => void;
   onLogout: () => void;
 }
 
-export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spotifyId, onCheckIn, onLogout }) => {
+export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spotifyId, onCheckIn, onUpdateUser, onLogout }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [synced, setSynced] = useState(false);
   
@@ -19,6 +21,21 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
   const [error, setError] = useState<string | null>(null);
   const [showReward, setShowReward] = useState(false);
   const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
+
+  // Profile Modal State
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  
+  // Edit Form State
+  const [editLastFmUser, setEditLastFmUser] = useState('');
+  const [editLastFmKey, setEditLastFmKey] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  
+  // Personal Music State
+  const [editPlaylistUrl, setEditPlaylistUrl] = useState('');
+  const [editPersonalArtist, setEditPersonalArtist] = useState('');
+  const [editPersonalTrack, setEditPersonalTrack] = useState('');
 
   // Initialize Check-in status based on currentUser data
   useEffect(() => {
@@ -30,7 +47,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
     } else {
       setHasCheckedInToday(false);
     }
-  }, [currentUser]); // Re-run if user changes or updates
+  }, [currentUser]); 
 
   const calculateProgress = () => {
     if (tracks.length === 0) return 0;
@@ -84,10 +101,46 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
   };
 
   const handleClaim = () => {
-    // Call parent to update database
     onCheckIn(); 
     setHasCheckedInToday(true);
     setShowReward(true);
+  };
+
+  // Profile Handlers
+  const openProfile = () => {
+    setEditLastFmUser(currentUser.lastFmUsername);
+    setEditLastFmKey(currentUser.lastFmApiKey);
+    setEditPassword(currentUser.password);
+    setEditPlaylistUrl(currentUser.personalPlaylistUrl || '');
+    setEditPersonalArtist(currentUser.personalArtist || '');
+    setEditPersonalTrack(currentUser.personalTrack || '');
+    setIsEditingProfile(false);
+    setIsProfileOpen(true);
+  };
+
+  const handleSaveProfile = async () => {
+    setIsSavingProfile(true);
+    try {
+      const updates = {
+        lastFmUsername: editLastFmUser,
+        lastFmApiKey: editLastFmKey,
+        password: editPassword,
+        personalPlaylistUrl: editPlaylistUrl,
+        personalArtist: editPersonalArtist,
+        personalTrack: editPersonalTrack
+      };
+      
+      const updatedUser = await storageService.updateUserProfile(currentUser.id, updates);
+      onUpdateUser(updatedUser); // Update parent state
+      setIsEditingProfile(false);
+      // Optional: Re-sync if credentials changed
+      setSynced(false); 
+      setMatchedStatus({});
+    } catch (e: any) {
+      alert('Failed to save profile: ' + e.message);
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   const progress = calculateProgress();
@@ -133,26 +186,24 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
     <div className="w-full max-w-md mx-auto p-4 flex flex-col items-center">
       
       {/* User Header */}
-      <div className="w-full flex justify-between items-center mb-6 bg-white/5 p-4 rounded-2xl border border-white/10">
+      <div className="w-full flex justify-between items-center mb-6 bg-white/5 p-4 rounded-2xl border border-white/10 hover:bg-white/10 transition-colors cursor-pointer" onClick={openProfile}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center font-bold text-lg uppercase">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center font-bold text-lg uppercase shadow-lg shadow-purple-500/20">
             {currentUser.appUsername.charAt(0)}
           </div>
           <div>
-            <div className="text-sm text-gray-400">Logged in as</div>
+            <div className="text-sm text-gray-400">Welcome back</div>
             <div className="font-bold text-white leading-none">{currentUser.appUsername}</div>
-            <div className="text-xs text-neon-green mt-1 flex items-center gap-1">
-              <UserIcon size={10} /> {currentUser.lastFmUsername}
+            <div className="text-[10px] text-neon-green mt-1 flex items-center gap-1 opacity-80">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Online
             </div>
           </div>
         </div>
-        <button 
-          onClick={onLogout}
-          className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
-          title="Logout"
+        <div 
+          className="p-2 bg-white/5 rounded-full text-gray-400 group-hover:text-white"
         >
-          <LogOut size={20} />
-        </button>
+          <Settings size={20} />
+        </div>
       </div>
 
       <div className="mb-4 text-center">
@@ -173,13 +224,19 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
           }`}
         >
           <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
-          {isLoading ? 'Sync Progress' : 'Check Streams'}
+          {isLoading ? 'Syncing...' : 'Check Streams'}
         </button>
         
         {error && (
-            <div className="mt-3 flex items-center gap-2 text-red-400 text-sm bg-red-900/20 p-2 rounded-lg">
+            <div className="mt-3 flex items-center gap-2 text-red-400 text-sm bg-red-900/20 p-2 rounded-lg border border-red-500/20">
                 <AlertCircle size={16} />
                 {error}
+                <button 
+                  onClick={openProfile}
+                  className="ml-auto text-xs underline text-red-300 hover:text-white"
+                >
+                  Edit Profile
+                </button>
             </div>
         )}
         
@@ -297,6 +354,229 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
             </div>
         </div>
       )}
+
+      {/* USER PROFILE MODAL */}
+      {isProfileOpen && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fade-in">
+          <div className="glass max-w-sm w-full rounded-3xl relative border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+             {/* Modal Header */}
+             <div className="h-28 bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 relative shrink-0">
+                <button 
+                  onClick={() => setIsProfileOpen(false)}
+                  className="absolute top-4 right-4 bg-black/30 p-2 rounded-full text-white hover:bg-black/50 transition-colors z-10"
+                >
+                  <X size={20} />
+                </button>
+             </div>
+             
+             {/* Avatar (Moved OUTSIDE scrollable area to prevent clipping) */}
+             <div className="absolute top-16 left-1/2 transform -translate-x-1/2 w-24 h-24 rounded-full bg-[#16133a] border-4 border-[#0f0c29] flex items-center justify-center shadow-[0_0_20px_rgba(0,0,0,0.5)] z-30">
+                <div className="text-3xl font-bold text-white uppercase">{currentUser.appUsername.charAt(0)}</div>
+                {!isEditingProfile && (
+                    <button 
+                    onClick={() => setIsEditingProfile(true)}
+                    className="absolute bottom-0 right-0 bg-blue-600 text-white p-1.5 rounded-full border-2 border-[#0f0c29] hover:bg-blue-500 transition-colors shadow-lg"
+                    title="Edit Profile"
+                    >
+                    <Edit2 size={12} />
+                    </button>
+                )}
+             </div>
+             
+             {/* Scrollable Content */}
+             <div className="px-6 pb-6 flex-1 overflow-y-auto custom-scrollbar pt-14">
+                
+                {/* Profile Info (Centered) */}
+                <div className="mt-2 text-center">
+                   <h2 className="text-2xl font-bold text-white flex items-center justify-center gap-2">
+                       {currentUser.appUsername}
+                   </h2>
+                   <div className="text-gray-400 text-xs mt-2 font-mono bg-white/5 px-3 py-1 rounded-full inline-block border border-white/5">
+                       ID: {currentUser.id.slice(-6)}
+                   </div>
+                </div>
+
+                {isEditingProfile ? (
+                  /* EDIT MODE */
+                  <div className="mt-8 space-y-4 animate-fade-in">
+                     <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase block mb-1">My Music</label>
+                        <div className="space-y-2">
+                            {/* Artist Input */}
+                            <div className="relative">
+                                <Mic2 className="absolute left-3 top-3 text-gray-500" size={16} />
+                                <input 
+                                    type="text"
+                                    value={editPersonalArtist}
+                                    onChange={(e) => setEditPersonalArtist(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white focus:border-green-500 focus:outline-none placeholder-gray-600 text-sm"
+                                    placeholder="Artist Name"
+                                />
+                            </div>
+                            {/* Track Input */}
+                            <div className="relative">
+                                <Music className="absolute left-3 top-3 text-gray-500" size={16} />
+                                <input 
+                                    type="text"
+                                    value={editPersonalTrack}
+                                    onChange={(e) => setEditPersonalTrack(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white focus:border-green-500 focus:outline-none placeholder-gray-600 text-sm"
+                                    placeholder="Track Title"
+                                />
+                            </div>
+                            {/* Link Input */}
+                            <div className="relative">
+                                <LinkIcon className="absolute left-3 top-3 text-gray-500" size={16} />
+                                <input 
+                                    type="text"
+                                    value={editPlaylistUrl}
+                                    onChange={(e) => setEditPlaylistUrl(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white focus:border-green-500 focus:outline-none placeholder-gray-600 text-sm"
+                                    placeholder="Spotify Link (https://...)"
+                                />
+                            </div>
+                        </div>
+                     </div>
+                     
+                     <div className="border-t border-white/10 my-4"></div>
+
+                     <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Last.fm Username</label>
+                        <div className="relative">
+                          <UserIcon className="absolute left-3 top-3 text-gray-500" size={16} />
+                          <input 
+                            type="text"
+                            value={editLastFmUser}
+                            onChange={(e) => setEditLastFmUser(e.target.value)}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white focus:border-neon-purple focus:outline-none"
+                          />
+                        </div>
+                     </div>
+                     <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Last.fm API Key</label>
+                        <div className="relative">
+                          <Key className="absolute left-3 top-3 text-gray-500" size={16} />
+                          <input 
+                            type="text"
+                            value={editLastFmKey}
+                            onChange={(e) => setEditLastFmKey(e.target.value)}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white focus:border-neon-purple focus:outline-none font-mono text-xs"
+                          />
+                        </div>
+                     </div>
+                     <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase block mb-1">App Password</label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 text-gray-500" size={16} />
+                          <input 
+                            type="text"
+                            value={editPassword}
+                            onChange={(e) => setEditPassword(e.target.value)}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white focus:border-neon-purple focus:outline-none"
+                          />
+                        </div>
+                     </div>
+
+                     <div className="flex gap-2 pt-2">
+                        <button 
+                          onClick={() => setIsEditingProfile(false)}
+                          className="flex-1 py-2 rounded-xl bg-gray-700 text-gray-300 font-bold text-sm"
+                        >
+                          Cancel
+                        </button>
+                        <button 
+                          onClick={handleSaveProfile}
+                          disabled={isSavingProfile}
+                          className="flex-1 py-2 rounded-xl bg-blue-600 text-white font-bold text-sm flex items-center justify-center gap-2"
+                        >
+                          {isSavingProfile ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />}
+                          Save Changes
+                        </button>
+                     </div>
+                  </div>
+                ) : (
+                  /* VIEW MODE */
+                  <div className="mt-8 space-y-4">
+                     
+                     {/* Personal Music Link */}
+                     <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
+                        <div className="w-10 h-10 rounded-full bg-blue-900/20 text-blue-400 flex items-center justify-center border border-blue-500/20 shrink-0">
+                           <Headphones size={20} />
+                        </div>
+                        <div className="overflow-hidden w-full">
+                           <div className="text-xs text-gray-500 font-bold uppercase truncate mb-0.5">My Music</div>
+                           {currentUser.personalPlaylistUrl ? (
+                               <a 
+                                 href={currentUser.personalPlaylistUrl}
+                                 target="_blank"
+                                 rel="noopener noreferrer" 
+                                 className="group block"
+                               >
+                                   <div className="font-bold text-blue-400 group-hover:text-blue-300 group-hover:underline truncate text-lg leading-tight">
+                                       {currentUser.personalTrack || 'My Playlist'}
+                                   </div>
+                                   {currentUser.personalArtist && (
+                                       <div className="text-sm text-gray-400 truncate">
+                                           {currentUser.personalArtist}
+                                       </div>
+                                   )}
+                                   {/* Fallback if no artist/track but url exists */}
+                                   {!currentUser.personalTrack && !currentUser.personalArtist && (
+                                       <div className="text-xs text-blue-500 flex items-center gap-1 mt-1">
+                                           Open Link <ExternalLink size={10} />
+                                       </div>
+                                   )}
+                               </a>
+                           ) : (
+                               <button 
+                                onClick={() => setIsEditingProfile(true)}
+                                className="text-sm text-gray-500 italic hover:text-white transition-colors text-left"
+                               >
+                                   Tap to set your music...
+                               </button>
+                           )}
+                        </div>
+                     </div>
+
+                     <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
+                        <div className="w-10 h-10 rounded-full bg-red-900/20 text-red-500 flex items-center justify-center border border-red-500/20 shrink-0">
+                           <Music size={20} />
+                        </div>
+                        <div className="overflow-hidden">
+                           <div className="text-xs text-gray-500 font-bold uppercase truncate">Last.fm Connected</div>
+                           <div className="font-bold text-white truncate">{currentUser.lastFmUsername}</div>
+                        </div>
+                     </div>
+
+                     <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
+                        <div className="w-10 h-10 rounded-full bg-green-900/20 text-green-500 flex items-center justify-center border border-green-500/20 shrink-0">
+                           <CalendarCheck size={20} />
+                        </div>
+                        <div>
+                           <div className="text-xs text-gray-500 font-bold uppercase">Last Check-in</div>
+                           <div className="font-bold text-white">{currentUser.lastCheckInDate || 'Not checked in yet'}</div>
+                        </div>
+                     </div>
+                  </div>
+                )}
+             </div>
+
+             {/* Footer Actions */}
+             <div className="p-6 pt-0 mt-auto shrink-0">
+                <button 
+                  onClick={() => {
+                    setIsProfileOpen(false);
+                    onLogout();
+                  }}
+                  className="w-full py-3 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-900/10 transition-colors flex items-center justify-center gap-2 font-bold text-sm"
+                >
+                   <LogOut size={18} /> Logout
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

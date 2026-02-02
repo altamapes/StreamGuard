@@ -80,6 +80,11 @@ function App() {
     }
   };
 
+  // Handle Profile Update
+  const handleUserUpdate = (updatedUser: User) => {
+    setCurrentUser(updatedUser);
+  };
+
   // Handle Admin Access
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,6 +128,7 @@ function App() {
             currentUser={currentUser}
             spotifyId={spotifyId}
             onCheckIn={handleUserCheckIn}
+            onUpdateUser={handleUserUpdate}
             onLogout={handleLogout}
           />
         )}

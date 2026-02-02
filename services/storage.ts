@@ -223,6 +223,26 @@ export const storageService = {
     return updatedUser!;
   },
 
+  // NEW: Method to update user profile (Last.fm, Password, etc.)
+  async updateUserProfile(userId: string, updates: Partial<User>): Promise<User> {
+    const data = await this._fetchFullData();
+    const users = Array.isArray(data.users) ? data.users : [];
+    let updatedUser: User | null = null;
+    
+    const newUsers = users.map(u => {
+      if (u.id === userId) {
+        updatedUser = { ...u, ...updates };
+        return updatedUser;
+      }
+      return u;
+    });
+
+    if (!updatedUser) throw new Error('User not found');
+    
+    await this._saveFullData({ ...data, users: newUsers });
+    return updatedUser!;
+  },
+
   // --- SMART GETTERS FOR MEMBER VIEW ---
   // Automatically returns TODAY's playlist if schedule exists
 

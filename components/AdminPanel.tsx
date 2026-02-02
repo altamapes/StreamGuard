@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Save, ArrowLeft, Plus, Settings, Database, Cloud, CloudOff, Download, Upload, ListMusic, Loader2, RefreshCw, Users, CheckCircle2, Clock, Music, Search, Filter, XCircle, BarChart3, Calendar, Copy, Key, Lock, ShieldCheck } from 'lucide-react';
+import { Trash2, Save, ArrowLeft, Plus, Settings, Database, Cloud, CloudOff, Download, Upload, ListMusic, Loader2, RefreshCw, Users, CheckCircle2, Clock, Music, Search, Filter, XCircle, BarChart3, Calendar, Copy, Key, Lock, ShieldCheck, Eye, X, User as UserIcon, Link as LinkIcon, Headphones, CalendarCheck } from 'lucide-react';
 import { TargetTrack, CloudConfig, User, WeeklySchedule } from '../types';
 import { storageService } from '../services/storage';
 import { DEFAULT_CLOUD_CONFIG, DEFAULT_SPOTIFY_ID } from '../constants';
@@ -30,6 +30,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'checked' | 'missing'>('all');
+  const [viewingUser, setViewingUser] = useState<User | null>(null); // State for modal
 
   // Settings State
   const [cloudConfig, setCloudConfig] = useState<CloudConfig>({ enabled: false, binId: '', apiKey: '' });
@@ -298,7 +299,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const todayDateDisplay = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-4 md:p-6 animate-fade-in">
+    <div className="w-full max-w-4xl mx-auto p-4 md:p-6 animate-fade-in relative">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
           Admin Dashboard
@@ -560,7 +561,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                     <th className="pb-3 pl-2 pt-2">App User</th>
                                     <th className="pb-3 pt-2">Last.fm</th>
                                     <th className="pb-3 text-center pt-2">Status</th>
-                                    <th className="pb-3 text-right pr-2 pt-2">Last Active</th>
+                                    <th className="pb-3 text-right pr-2 pt-2">Action</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
@@ -590,8 +591,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                                         </div>
                                                     )}
                                                 </td>
-                                                <td className="py-4 text-right pr-2 text-sm text-gray-500">
-                                                    {user.lastCheckInDate || 'Never'}
+                                                <td className="py-4 text-right pr-2">
+                                                    <button 
+                                                        onClick={() => setViewingUser(user)}
+                                                        className="p-2 bg-white/5 hover:bg-blue-600/20 hover:text-blue-400 rounded-lg transition-colors border border-white/5"
+                                                        title="View Full Profile"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
                                                 </td>
                                             </tr>
                                         );
@@ -745,6 +752,112 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
             )}
         </div>
       )}
+
+      {/* VIEW USER PROFILE MODAL */}
+      {viewingUser && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fade-in">
+            <div className="glass max-w-lg w-full rounded-3xl relative border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                
+                {/* Header (Shrink-0) */}
+                <div className="h-28 bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 relative shrink-0">
+                    <button 
+                        onClick={() => setViewingUser(null)}
+                        className="absolute top-4 right-4 bg-black/30 p-2 rounded-full text-white hover:bg-black/50 transition-colors z-10"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+                
+                {/* Avatar (Absolute on top) */}
+                <div className="absolute top-16 left-1/2 transform -translate-x-1/2 w-24 h-24 rounded-full bg-[#16133a] border-4 border-[#0f0c29] flex items-center justify-center shadow-[0_0_20px_rgba(0,0,0,0.5)] z-30">
+                    <div className="text-3xl font-bold text-white uppercase">{viewingUser.appUsername.charAt(0)}</div>
+                </div>
+
+                {/* Content (Flex-1 Scrollable) */}
+                <div className="px-8 pb-8 flex-1 overflow-y-auto custom-scrollbar pt-14">
+                    <div className="text-center mb-8">
+                        <h2 className="text-2xl font-bold text-white">{viewingUser.appUsername}</h2>
+                        <div className="text-xs text-gray-500 font-mono mt-1">ID: {viewingUser.id}</div>
+                        <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                            {isCheckedInToday(viewingUser.lastCheckInDate) ? (
+                                <span className="text-green-400 text-xs font-bold flex items-center gap-1"><CheckCircle2 size={12}/> Checked In Today</span>
+                            ) : (
+                                <span className="text-red-400 text-xs font-bold flex items-center gap-1"><XCircle size={12}/> Missing Today</span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="grid gap-6">
+                        
+                        {/* Activity Status (New) */}
+                        <div className="glass p-4 rounded-xl border border-white/5">
+                            <h4 className="text-gray-400 text-xs font-bold uppercase mb-3 flex items-center gap-2">
+                                <CalendarCheck size={12} /> Activity Status
+                            </h4>
+                            <div className="grid gap-3">
+                                <div>
+                                    <label className="text-[10px] text-gray-500 block">Status Today</label>
+                                    <div className="mt-1">
+                                        {isCheckedInToday(viewingUser.lastCheckInDate) ? (
+                                            <span className="text-green-400 text-sm font-bold flex items-center gap-2">
+                                                <CheckCircle2 size={16} /> Checked In
+                                            </span>
+                                        ) : (
+                                            <span className="text-red-400 text-sm font-bold flex items-center gap-2">
+                                                <XCircle size={16} /> Missing
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] text-gray-500 block">Last Check-in Date</label>
+                                    <div className="text-sm font-medium text-white">
+                                        {viewingUser.lastCheckInDate || 'Never'}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Personal Music */}
+                        <div className="glass p-4 rounded-xl border border-white/5">
+                            <h4 className="text-gray-400 text-xs font-bold uppercase mb-3 flex items-center gap-2">
+                                <Headphones size={12} /> Personal Music
+                            </h4>
+                            {viewingUser.personalPlaylistUrl ? (
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-10 h-10 rounded bg-blue-900/20 flex items-center justify-center text-blue-400 border border-blue-500/20">
+                                            <Music size={18} />
+                                        </div>
+                                        <div className="overflow-hidden">
+                                            <div className="text-sm font-bold text-white truncate">
+                                                {viewingUser.personalTrack || 'Unknown Track'}
+                                            </div>
+                                            <div className="text-xs text-gray-400 truncate">
+                                                {viewingUser.personalArtist || 'Unknown Artist'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <a 
+                                        href={viewingUser.personalPlaylistUrl}
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1 break-all"
+                                    >
+                                        <LinkIcon size={10} /> {viewingUser.personalPlaylistUrl}
+                                    </a>
+                                </div>
+                            ) : (
+                                <div className="text-sm text-gray-500 italic">User hasn't set their music yet.</div>
+                            )}
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+
     </div>
   );
 };
