@@ -82,7 +82,15 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
 
         if (foundTrack) {
           let timeDisplay = 'Just now';
-          if (foundTrack.date) {
+          if (foundTrack.date && foundTrack.date.uts) {
+            const dateObj = new Date(parseInt(foundTrack.date.uts) * 1000);
+            timeDisplay = dateObj.toLocaleString('id-ID', {
+              day: 'numeric',
+              month: 'short',
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+          } else if (foundTrack.date) {
             timeDisplay = foundTrack.date['#text'];
           } else if (foundTrack['@attr']?.nowplaying === 'true') {
             timeDisplay = 'Listening Now...';
