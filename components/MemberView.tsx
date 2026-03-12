@@ -204,9 +204,6 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
             {currentUser.appUsername.charAt(0)}
           </div>
           <div className="flex flex-col">
-            <div className="text-[10px] font-bold tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-neon-green to-blue-400 mb-0.5">
-              StreamGuard
-            </div>
             <div className="text-xs text-gray-400">Welcome back,</div>
             <div className="font-bold text-white text-lg leading-tight">{currentUser.appUsername}</div>
             <div className="text-[10px] text-neon-green mt-0.5 flex items-center gap-1 opacity-80">
