@@ -134,8 +134,8 @@ function App() {
         )}
       </main>
 
-      {/* Admin Trigger (Bottom Left) - Always visible unless inside Admin panel */}
-      {viewMode !== ViewMode.ADMIN && (
+      {/* Admin Trigger (Bottom Left) - Only visible on Auth screen */}
+      {viewMode === ViewMode.AUTH && (
         <button
           onClick={() => setIsPinModalOpen(true)}
           className="fixed bottom-6 left-6 p-3 rounded-full bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white transition-all z-50 group"
