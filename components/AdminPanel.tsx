@@ -591,36 +591,40 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                         const checkedIn = isCheckedInToday(user.lastCheckInDate);
                                         return (
                                             <tr key={user.id} className="group hover:bg-white/5 transition-colors">
-                                                <td className={`py-4 pl-2 font-bold ${checkedIn ? 'text-white' : 'text-red-400'}`}>
+                                                <td className={`py-4 pl-2 align-middle font-bold ${checkedIn ? 'text-white' : 'text-red-400'}`}>
                                                     {user.appUsername}
                                                 </td>
-                                                <td className="py-4 text-gray-400 text-sm font-mono">{user.lastFmUsername}</td>
-                                                <td className="py-4 flex justify-center">
-                                                    {checkedIn ? (
-                                                        <div className="flex items-center gap-1 bg-green-900/30 text-green-400 px-3 py-1 rounded-full text-xs font-bold border border-green-500/20">
-                                                            <CheckCircle2 size={14} /> Checked In
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex items-center gap-1 bg-red-900/20 text-red-400 px-3 py-1 rounded-full text-xs font-bold border border-red-500/30">
-                                                                <XCircle size={14} /> Missing
-                                                        </div>
-                                                    )}
+                                                <td className="py-4 align-middle text-gray-400 text-sm font-mono">{user.lastFmUsername}</td>
+                                                <td className="py-4 align-middle">
+                                                    <div className="flex justify-center">
+                                                        {checkedIn ? (
+                                                            <div className="flex items-center gap-1 bg-green-900/30 text-green-400 px-3 py-1 rounded-full text-xs font-bold border border-green-500/20 whitespace-nowrap">
+                                                                <CheckCircle2 size={14} /> Checked In
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-1 bg-red-900/20 text-red-400 px-3 py-1 rounded-full text-xs font-bold border border-red-500/30 whitespace-nowrap">
+                                                                    <XCircle size={14} /> Missing
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </td>
-                                                <td className="py-4 text-right pr-2 flex justify-end gap-2">
-                                                    <button 
-                                                        onClick={() => setViewingUser(user)}
-                                                        className="p-2 bg-white/5 hover:bg-blue-600/20 hover:text-blue-400 rounded-lg transition-colors border border-white/5"
-                                                        title="View Full Profile"
-                                                    >
-                                                        <Eye size={16} />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleDeleteUser(user.id, user.appUsername)}
-                                                        className="p-2 bg-white/5 hover:bg-red-600/20 hover:text-red-400 rounded-lg transition-colors border border-white/5"
-                                                        title="Delete User"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                <td className="py-4 align-middle pr-2">
+                                                    <div className="flex justify-end gap-2">
+                                                        <button 
+                                                            onClick={() => setViewingUser(user)}
+                                                            className="p-2 bg-white/5 hover:bg-blue-600/20 hover:text-blue-400 rounded-lg transition-colors border border-white/5"
+                                                            title="View Full Profile"
+                                                        >
+                                                            <Eye size={16} />
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleDeleteUser(user.id, user.appUsername)}
+                                                            className="p-2 bg-white/5 hover:bg-red-600/20 hover:text-red-400 rounded-lg transition-colors border border-white/5"
+                                                            title="Delete User"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         );
