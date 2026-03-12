@@ -199,15 +199,18 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
       
       {/* User Header */}
       <div className="w-full flex justify-between items-center mb-6 bg-white/5 p-4 rounded-2xl border border-white/10 hover:bg-white/10 transition-colors cursor-pointer" onClick={openProfile}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center font-bold text-lg uppercase shadow-lg shadow-purple-500/20">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center font-bold text-xl uppercase shadow-lg shadow-purple-500/20 shrink-0">
             {currentUser.appUsername.charAt(0)}
           </div>
-          <div>
-            <div className="text-sm text-gray-400">Welcome back</div>
-            <div className="font-bold text-white leading-none">{currentUser.appUsername}</div>
-            <div className="text-[10px] text-neon-green mt-1 flex items-center gap-1 opacity-80">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Online
+          <div className="flex flex-col">
+            <div className="text-[10px] font-bold tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-neon-green to-blue-400 mb-0.5">
+              StreamGuard
+            </div>
+            <div className="text-xs text-gray-400">Welcome back,</div>
+            <div className="font-bold text-white text-lg leading-tight">{currentUser.appUsername}</div>
+            <div className="text-[10px] text-neon-green mt-0.5 flex items-center gap-1 opacity-80">
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Online
             </div>
           </div>
         </div>
@@ -226,12 +229,6 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
             <Settings size={20} />
           </div>
         </div>
-      </div>
-
-      <div className="mb-4 text-center">
-        <h1 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-neon-green to-blue-400 drop-shadow-sm">
-          StreamGuard
-        </h1>
       </div>
 
       {/* Sync Button Only (No Inputs) */}
