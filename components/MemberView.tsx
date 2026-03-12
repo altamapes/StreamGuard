@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Clock, CalendarCheck, LogOut, User as UserIcon, X, Music, ExternalLink, Settings, Edit2, Save, Key, Lock, Link as LinkIcon, Headphones, Mic2 } from 'lucide-react';
+import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Clock, CalendarCheck, LogOut, User as UserIcon, X, Music, ExternalLink, Settings, Edit2, Save, Key, Lock, Link as LinkIcon, Headphones, Mic2, Eye } from 'lucide-react';
 import { TargetTrack, User } from '../types';
 import { fetchRecentTracks } from '../services/lastFmService';
 import { storageService } from '../services/storage';
@@ -199,10 +199,19 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
             </div>
           </div>
         </div>
-        <div 
-          className="p-2 bg-white/5 rounded-full text-gray-400 group-hover:text-white"
-        >
-          <Settings size={20} />
+        <div className="flex items-center gap-2">
+          <div 
+            className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            title="View Profile"
+          >
+            <Eye size={20} />
+          </div>
+          <div 
+            className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            title="Settings"
+          >
+            <Settings size={20} />
+          </div>
         </div>
       </div>
 
