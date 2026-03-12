@@ -243,6 +243,13 @@ export const storageService = {
     return updatedUser!;
   },
 
+  async deleteUser(userId: string): Promise<void> {
+    const data = await this._fetchFullData();
+    const users = Array.isArray(data.users) ? data.users : [];
+    const newUsers = users.filter(u => u.id !== userId);
+    await this._saveFullData({ ...data, users: newUsers });
+  },
+
   // --- SMART GETTERS FOR MEMBER VIEW ---
   // Automatically returns TODAY's playlist if schedule exists
 

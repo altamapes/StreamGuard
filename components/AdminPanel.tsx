@@ -90,6 +90,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     }
   };
 
+  const handleDeleteUser = async (userId: string, username: string) => {
+    if (window.confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
+      try {
+        await storageService.deleteUser(userId);
+        setUsersList(usersList.filter(u => u.id !== userId));
+        if (viewingUser && viewingUser.id === userId) {
+          setViewingUser(null);
+        }
+      } catch (e) {
+        console.error("Failed to delete user", e);
+        alert("Failed to delete user.");
+      }
+    }
+  };
+
   // --- PLAYLIST LOGIC (WEEKLY) ---
 
   const handleDayChange = (dayIndex: number) => {
@@ -591,13 +606,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                                         </div>
                                                     )}
                                                 </td>
-                                                <td className="py-4 text-right pr-2">
+                                                <td className="py-4 text-right pr-2 flex justify-end gap-2">
                                                     <button 
                                                         onClick={() => setViewingUser(user)}
                                                         className="p-2 bg-white/5 hover:bg-blue-600/20 hover:text-blue-400 rounded-lg transition-colors border border-white/5"
                                                         title="View Full Profile"
                                                     >
                                                         <Eye size={16} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleDeleteUser(user.id, user.appUsername)}
+                                                        className="p-2 bg-white/5 hover:bg-red-600/20 hover:text-red-400 rounded-lg transition-colors border border-white/5"
+                                                        title="Delete User"
+                                                    >
+                                                        <Trash2 size={16} />
                                                     </button>
                                                 </td>
                                             </tr>
@@ -852,6 +874,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                             )}
                         </div>
 
+                    </div>
+                    
+                    {/* Delete User Button */}
+                    <div className="mt-8 pt-6 border-t border-white/10 flex justify-end">
+                        <button 
+                            onClick={() => handleDeleteUser(viewingUser.id, viewingUser.appUsername)}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-900/30 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition-colors border border-red-500/20"
+                        >
+                            <Trash2 size={16} />
+                            Delete User
+                        </button>
                     </div>
                 </div>
             </div>
