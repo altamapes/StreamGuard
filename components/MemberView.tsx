@@ -118,6 +118,18 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
     setIsProfileOpen(true);
   };
 
+  const openSettings = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditLastFmUser(currentUser.lastFmUsername);
+    setEditLastFmKey(currentUser.lastFmApiKey);
+    setEditPassword(currentUser.password);
+    setEditPlaylistUrl(currentUser.personalPlaylistUrl || '');
+    setEditPersonalArtist(currentUser.personalArtist || '');
+    setEditPersonalTrack(currentUser.personalTrack || '');
+    setIsEditingProfile(true);
+    setIsProfileOpen(true);
+  };
+
   const handleSaveProfile = async () => {
     setIsSavingProfile(true);
     try {
@@ -209,6 +221,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
           <div 
             className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
             title="Settings"
+            onClick={openSettings}
           >
             <Settings size={20} />
           </div>
