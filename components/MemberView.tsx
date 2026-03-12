@@ -20,7 +20,6 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
   const [matchedStatus, setMatchedStatus] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [showReward, setShowReward] = useState(false);
-  const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
 
   // Profile Modal State
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -37,17 +36,9 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
   const [editPersonalArtist, setEditPersonalArtist] = useState('');
   const [editPersonalTrack, setEditPersonalTrack] = useState('');
 
-  // Initialize Check-in status based on currentUser data
-  useEffect(() => {
-    const todayDate = new Date().toLocaleDateString();
-    
-    // Check user's specific last check-in date
-    if (currentUser.lastCheckInDate === todayDate) {
-      setHasCheckedInToday(true);
-    } else {
-      setHasCheckedInToday(false);
-    }
-  }, [currentUser]); 
+  // Calculate Check-in status dynamically
+  const todayDate = new Date().toLocaleDateString();
+  const hasCheckedInToday = currentUser.lastCheckInDate === todayDate;
 
   const calculateProgress = () => {
     if (tracks.length === 0) return 0;
@@ -85,6 +76,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
           if (foundTrack.date && foundTrack.date.uts) {
             const dateObj = new Date(parseInt(foundTrack.date.uts) * 1000);
             timeDisplay = dateObj.toLocaleString('id-ID', {
+              timeZone: 'Asia/Jakarta',
               day: 'numeric',
               month: 'short',
               hour: '2-digit',

@@ -22,6 +22,16 @@ function App() {
   // Initialize Data
   useEffect(() => {
     loadData();
+    
+    // Reload data when window gains focus to keep it fresh
+    const handleFocus = () => {
+      loadData();
+    };
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   const loadData = async () => {
