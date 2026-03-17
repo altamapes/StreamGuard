@@ -296,7 +296,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
             const dayConfig = weeklySchedule[dayIndex];
             const hasTracks = dayConfig && dayConfig.tracks && dayConfig.tracks.length > 0;
             const isCheckedIn = currentUser.checkInHistory?.includes(dateStr);
-            const isHutang = !isFuture && hasTracks && !isCheckedIn && !isToday;
+            const isPending = !isFuture && hasTracks && !isCheckedIn && !isToday;
             const isSelected = selectedDate.toDateString() === date.toDateString();
 
             return (
@@ -317,8 +317,8 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                 <div className="flex flex-col items-center gap-1">
                   <span className="uppercase text-[10px] tracking-wider opacity-60">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayIndex]}</span>
                   <span className="text-base">{date.getDate()}</span>
-                  {isHutang && (
-                    <span className="text-[9px] px-1.5 py-0.5 bg-red-500/20 text-red-500 rounded border border-red-500/30 font-black uppercase">Hutang</span>
+                  {isPending && (
+                    <span className="text-[9px] px-1.5 py-0.5 bg-red-500/20 text-red-500 rounded border border-red-500/30 font-black uppercase">Pending</span>
                   )}
                   {isCheckedIn && (
                     <span className="text-[9px] px-1.5 py-0.5 bg-green-500/20 text-green-500 rounded border border-green-500/30 font-black uppercase">Selesai</span>

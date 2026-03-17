@@ -598,7 +598,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                 <tr className="text-gray-400 border-b border-white/10 text-sm uppercase tracking-wider">
                                     <th className="pb-3 pl-2 pt-2">App User</th>
                                     <th className="pb-3 pt-2">Last.fm</th>
-                                    <th className="pb-3 text-center pt-2">Hutang</th>
+                                    <th className="pb-3 text-center pt-2">Pending</th>
                                     <th className="pb-3 text-center pt-2">Status</th>
                                     <th className="pb-3 text-right pr-2 pt-2">Action</th>
                                 </tr>
@@ -623,7 +623,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                                 <td className="py-4 align-middle text-center">
                                                     {debt > 0 ? (
                                                         <span className="px-2 py-1 bg-red-900/40 text-red-500 rounded-lg text-xs font-black border border-red-500/20">
-                                                            {debt} HARI
+                                                            {debt} PENDING
                                                         </span>
                                                     ) : (
                                                         <span className="text-gray-600 text-xs">-</span>
