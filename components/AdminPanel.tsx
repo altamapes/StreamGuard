@@ -285,10 +285,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   };
 
   // Helper to check if user checked in today
-  const isCheckedInToday = (dateString: string | null) => {
-    if (!dateString) return false;
+  const isCheckedInToday = (user: User) => {
     const today = new Date().toLocaleDateString();
-    return dateString === today;
+    if (user.checkInHistory && user.checkInHistory.includes(today)) return true;
+    return user.lastCheckInDate === today;
   };
 
   // --- FILTER & STATS LOGIC ---
@@ -296,7 +296,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     return usersList.filter(user => {
       const matchesSearch = user.appUsername.toLowerCase().includes(searchQuery.toLowerCase()) || 
                             user.lastFmUsername.toLowerCase().includes(searchQuery.toLowerCase());
-      const checkedIn = isCheckedInToday(user.lastCheckInDate);
+      const checkedIn = isCheckedInToday(user);
       if (filterStatus === 'checked') return matchesSearch && checkedIn;
       if (filterStatus === 'missing') return matchesSearch && !checkedIn;
       return matchesSearch;
@@ -305,7 +305,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
   const stats = {
     total: usersList.length,
-    checkedIn: usersList.filter(u => isCheckedInToday(u.lastCheckInDate)).length,
+    checkedIn: usersList.filter(u => isCheckedInToday(u)).length,
     missing: 0
   };
   stats.missing = stats.total - stats.checkedIn;
@@ -588,7 +588,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                     </tr>
                                 ) : (
                                     filteredUsers.map((user) => {
-                                        const checkedIn = isCheckedInToday(user.lastCheckInDate);
+                                        const checkedIn = isCheckedInToday(user);
                                         return (
                                             <tr key={user.id} className="group hover:bg-white/5 transition-colors">
                                                 <td className={`py-4 pl-2 align-middle font-bold ${checkedIn ? 'text-white' : 'text-red-400'}`}>
@@ -805,7 +805,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                         <h2 className="text-2xl font-bold text-white">{viewingUser.appUsername}</h2>
                         <div className="text-xs text-gray-500 font-mono mt-1">ID: {viewingUser.id}</div>
                         <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
-                            {isCheckedInToday(viewingUser.lastCheckInDate) ? (
+                            {isCheckedInToday(viewingUser) ? (
                                 <span className="text-green-400 text-xs font-bold flex items-center gap-1"><CheckCircle2 size={12}/> Checked In Today</span>
                             ) : (
                                 <span className="text-red-400 text-xs font-bold flex items-center gap-1"><XCircle size={12}/> Missing Today</span>
@@ -824,7 +824,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                 <div>
                                     <label className="text-[10px] text-gray-500 block">Status Today</label>
                                     <div className="mt-1">
-                                        {isCheckedInToday(viewingUser.lastCheckInDate) ? (
+                                        {isCheckedInToday(viewingUser) ? (
                                             <span className="text-green-400 text-sm font-bold flex items-center gap-2">
                                                 <CheckCircle2 size={16} /> Checked In
                                             </span>

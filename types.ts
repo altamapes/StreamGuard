@@ -39,6 +39,7 @@ export interface User {
   lastFmUsername: string;
   lastFmApiKey: string;
   lastCheckInDate: string | null; // Stores the date string (e.g. "20/02/2024")
+  checkInHistory?: string[]; // Array of date strings for completed days
   personalPlaylistUrl?: string; // Optional: User's personal Spotify link
   personalArtist?: string; // Optional: Artist name for display
   personalTrack?: string; // Optional: Track title for display

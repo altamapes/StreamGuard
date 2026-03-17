@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Clock, CalendarCheck, LogOut, User as UserIcon, X, Music, ExternalLink, Settings, Edit2, Save, Key, Lock, Link as LinkIcon, Headphones, Mic2, Eye } from 'lucide-react';
-import { TargetTrack, User } from '../types';
+import { TargetTrack, User, WeeklySchedule } from '../types';
 import { fetchRecentTracks } from '../services/lastFmService';
 import { storageService } from '../services/storage';
+import { DEFAULT_SPOTIFY_ID } from '../constants';
 
 interface MemberViewProps {
-  tracks: TargetTrack[];
+  weeklySchedule: WeeklySchedule;
   currentUser: User;
-  spotifyId: string;
-  onCheckIn: () => void;
+  onCheckIn: (dateStr: string) => void;
   onUpdateUser: (user: User) => void;
   onLogout: () => void;
 }
 
-export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spotifyId, onCheckIn, onUpdateUser, onLogout }) => {
+export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentUser, onCheckIn, onUpdateUser, onLogout }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [synced, setSynced] = useState(false);
   
@@ -36,9 +36,18 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
   const [editPersonalArtist, setEditPersonalArtist] = useState('');
   const [editPersonalTrack, setEditPersonalTrack] = useState('');
 
+  // Day Selection State
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  // Derive tracks and spotifyId from weeklySchedule and selectedDate
+  const dayIndex = selectedDate.getDay();
+  const dayConfig = weeklySchedule[dayIndex] || { tracks: [], spotifyId: '' };
+  const tracks = dayConfig.tracks || [];
+  const spotifyId = dayConfig.spotifyId || DEFAULT_SPOTIFY_ID;
+
   // Calculate Check-in status dynamically
-  const todayDate = new Date().toLocaleDateString();
-  const hasCheckedInToday = currentUser.lastCheckInDate === todayDate;
+  const selectedDateStr = selectedDate.toLocaleDateString();
+  const hasCheckedInSelectedDate = currentUser.checkInHistory?.includes(selectedDateStr) || false;
 
   const calculateProgress = () => {
     if (tracks.length === 0) return 0;
@@ -101,8 +110,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
   };
 
   const handleClaim = () => {
-    onCheckIn(); 
-    setHasCheckedInToday(true);
+    onCheckIn(selectedDateStr); 
     setShowReward(true);
   };
 
@@ -159,14 +167,14 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
   const isComplete = progress === 100 && tracks.length > 0;
 
   const renderButton = () => {
-    if (hasCheckedInToday) {
+    if (hasCheckedInSelectedDate) {
       return (
         <button 
           disabled
           className="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 bg-green-900/20 text-green-400 border border-green-500/30 cursor-not-allowed opacity-80"
         >
           <CalendarCheck size={24} />
-          Checked In for Today
+          Checked In for {selectedDate.toDateString() === new Date().toDateString() ? 'Today' : selectedDate.toLocaleDateString('en-US', { weekday: 'short' })}
         </button>
       );
     }
@@ -178,7 +186,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
           className="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all duration-500 bg-gradient-to-r from-neon-purple to-pink-600 text-white shadow-[0_0_30px_rgba(176,38,255,0.6)] scale-100 hover:scale-[1.02] cursor-pointer"
         >
           <Trophy size={24} className="text-yellow-300" />
-          CLAIM DAILY CHECK-IN
+          CLAIM CHECK-IN
         </button>
       );
     }
@@ -192,6 +200,18 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
         Complete 100% to Check-In
       </button>
     );
+  };
+
+  const getDatesForCurrentWeek = () => {
+    const today = new Date();
+    const currentDay = today.getDay(); // 0-6
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - currentDay + i);
+        dates.push(date);
+    }
+    return dates;
   };
 
   return (
@@ -225,6 +245,53 @@ export const MemberView: React.FC<MemberViewProps> = ({ tracks, currentUser, spo
           >
             <Settings size={20} />
           </div>
+        </div>
+      </div>
+
+      {/* Day Selector */}
+      <div className="w-full mb-6 overflow-x-auto custom-scrollbar">
+        <div className="flex gap-2 pb-2">
+          {getDatesForCurrentWeek().map((date, index) => {
+            const dateStr = date.toLocaleDateString();
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const compareDate = new Date(date);
+            compareDate.setHours(0,0,0,0);
+            
+            const isToday = compareDate.getTime() === today.getTime();
+            const isFuture = compareDate > today;
+            const dayConfig = weeklySchedule[index];
+            const hasTracks = dayConfig && dayConfig.tracks && dayConfig.tracks.length > 0;
+            const isCheckedIn = currentUser.checkInHistory?.includes(dateStr);
+            const isHutang = !isFuture && hasTracks && !isCheckedIn && !isToday;
+            const isSelected = selectedDate.toDateString() === date.toDateString();
+
+            if (!hasTracks && isFuture) return null;
+
+            return (
+              <button
+                key={index}
+                onClick={() => {
+                  setSelectedDate(date);
+                  setMatchedStatus({}); // Reset matches when changing day
+                  setSynced(false);
+                }}
+                disabled={isFuture}
+                className={`flex-shrink-0 px-4 py-2 rounded-xl whitespace-nowrap text-sm font-bold transition-all border ${
+                  isSelected 
+                    ? 'bg-white text-black border-white scale-105' 
+                    : 'bg-black/40 text-gray-400 border-white/10 hover:border-purple-500 hover:text-purple-300'
+                } ${isFuture ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <div className="flex flex-col items-center">
+                  <span>{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][index]}</span>
+                  {isHutang && <span className="text-[10px] text-red-500 mt-1">Hutang</span>}
+                  {isCheckedIn && <span className="text-[10px] text-green-500 mt-1">Selesai</span>}
+                  {isToday && !isCheckedIn && <span className="text-[10px] text-blue-400 mt-1">Hari Ini</span>}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 

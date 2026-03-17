@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Unlock, X } from 'lucide-react';
-import { ViewMode, TargetTrack, User } from './types';
+import { ViewMode, TargetTrack, User, WeeklySchedule } from './types';
 import { ADMIN_PIN, DEFAULT_SPOTIFY_ID } from './constants';
 import { AdminPanel } from './components/AdminPanel';
 import { MemberView } from './components/MemberView';
@@ -12,6 +12,7 @@ function App() {
   const [targetTracks, setTargetTracks] = useState<TargetTrack[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [spotifyId, setSpotifyId] = useState(DEFAULT_SPOTIFY_ID);
+  const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule>({});
 
   // Pin Modal State
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
@@ -40,6 +41,9 @@ function App() {
       const { tracks, spotifyId: sId } = await storageService.getTodayData();
       setTargetTracks(tracks);
       setSpotifyId(sId);
+
+      const schedule = await storageService.getWeeklySchedule();
+      setWeeklySchedule(schedule);
 
       // Load Custom Admin PIN
       const pin = await storageService.getAdminPin();
@@ -77,13 +81,11 @@ function App() {
   };
 
   // Check-In Logic
-  const handleUserCheckIn = async () => {
+  const handleUserCheckIn = async (dateStr: string) => {
     if (!currentUser) return;
-
-    const todayDate = new Date().toLocaleDateString();
     
     try {
-      const updatedUser = await storageService.updateUserCheckIn(currentUser.id, todayDate);
+      const updatedUser = await storageService.updateUserCheckIn(currentUser.id, dateStr);
       setCurrentUser(updatedUser);
     } catch (e) {
       console.error("Check-in failed", e);
@@ -134,9 +136,8 @@ function App() {
 
         {viewMode === ViewMode.MEMBER && currentUser && (
           <MemberView 
-            tracks={targetTracks} 
+            weeklySchedule={weeklySchedule}
             currentUser={currentUser}
-            spotifyId={spotifyId}
             onCheckIn={handleUserCheckIn}
             onUpdateUser={handleUserUpdate}
             onLogout={handleLogout}

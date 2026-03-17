@@ -211,7 +211,15 @@ export const storageService = {
     
     const newUsers = users.map(u => {
       if (u.id === userId) {
-        updatedUser = { ...u, lastCheckInDate: dateString };
+        const history = u.checkInHistory || [];
+        if (!history.includes(dateString)) {
+          history.push(dateString);
+        }
+        // If checking in for today, update lastCheckInDate as well for backward compatibility
+        const todayStr = new Date().toLocaleDateString();
+        const newLastCheckIn = dateString === todayStr ? dateString : u.lastCheckInDate;
+        
+        updatedUser = { ...u, lastCheckInDate: newLastCheckIn, checkInHistory: history };
         return updatedUser;
       }
       return u;
