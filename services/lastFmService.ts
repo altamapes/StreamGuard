@@ -13,7 +13,12 @@ interface LastFmResponse {
  * Fetches recent tracks from Last.fm.
  * Uses the provided apiKey. Falls back to mock data if apiKey is empty.
  */
-export const fetchRecentTracks = async (username: string, apiKey: string): Promise<LastFmTrack[]> => {
+export const fetchRecentTracks = async (
+  username: string, 
+  apiKey: string, 
+  from?: number, 
+  to?: number
+): Promise<LastFmTrack[]> => {
   if (!username) return [];
 
   // If no API key is provided, use mock data for demonstration
@@ -21,7 +26,17 @@ export const fetchRecentTracks = async (username: string, apiKey: string): Promi
     console.warn('No API Key provided, using Mock Data.');
     return new Promise((resolve) => {
       setTimeout(() => {
-        resolve(mockData);
+        // Only return mock data if 'from' is not set (legacy) or if 'from' is in the past
+        // For testing "today" vs "past", we'll return empty if 'from' is today
+        const now = Math.floor(Date.now() / 1000);
+        const todayStart = Math.floor(new Date().setHours(0,0,0,0) / 1000);
+        
+        if (from && from >= todayStart) {
+            // If checking for today, return empty to simulate "not played yet"
+            resolve([]);
+        } else {
+            resolve(mockData);
+        }
       }, 1000);
     });
   }
@@ -29,7 +44,10 @@ export const fetchRecentTracks = async (username: string, apiKey: string): Promi
   try {
     const encodedUser = encodeURIComponent(username.trim());
     const cleanKey = apiKey.trim();
-    const url = `${LAST_FM_API_URL}?method=user.getrecenttracks&user=${encodedUser}&api_key=${cleanKey}&format=json&limit=50`;
+    let url = `${LAST_FM_API_URL}?method=user.getrecenttracks&user=${encodedUser}&api_key=${cleanKey}&format=json&limit=200`;
+    
+    if (from) url += `&from=${from}`;
+    if (to) url += `&to=${to}`;
     
     const response = await fetch(url);
     const data: LastFmResponse = await response.json();

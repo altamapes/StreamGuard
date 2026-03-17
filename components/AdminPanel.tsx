@@ -291,6 +291,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     return user.lastCheckInDate === today;
   };
 
+  const calculateDebt = (user: User) => {
+    let debtCount = 0;
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
+    // Check last 7 days (excluding today)
+    for (let i = 1; i <= 7; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toLocaleDateString();
+      const dayIndex = date.getDay();
+      
+      const dayConfig = schedule[dayIndex];
+      const hasTracks = dayConfig && dayConfig.tracks && dayConfig.tracks.length > 0;
+      const isCheckedIn = user.checkInHistory?.includes(dateStr);
+      
+      if (hasTracks && !isCheckedIn) {
+        debtCount++;
+      }
+    }
+    return debtCount;
+  };
+
   // --- FILTER & STATS LOGIC ---
   const getFilteredUsers = () => {
     return usersList.filter(user => {
@@ -575,6 +598,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                 <tr className="text-gray-400 border-b border-white/10 text-sm uppercase tracking-wider">
                                     <th className="pb-3 pl-2 pt-2">App User</th>
                                     <th className="pb-3 pt-2">Last.fm</th>
+                                    <th className="pb-3 text-center pt-2">Hutang</th>
                                     <th className="pb-3 text-center pt-2">Status</th>
                                     <th className="pb-3 text-right pr-2 pt-2">Action</th>
                                 </tr>
@@ -589,12 +613,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                 ) : (
                                     filteredUsers.map((user) => {
                                         const checkedIn = isCheckedInToday(user);
+                                        const debt = calculateDebt(user);
                                         return (
                                             <tr key={user.id} className="group hover:bg-white/5 transition-colors">
                                                 <td className={`py-4 pl-2 align-middle font-bold ${checkedIn ? 'text-white' : 'text-red-400'}`}>
                                                     {user.appUsername}
                                                 </td>
                                                 <td className="py-4 align-middle text-gray-400 text-sm font-mono">{user.lastFmUsername}</td>
+                                                <td className="py-4 align-middle text-center">
+                                                    {debt > 0 ? (
+                                                        <span className="px-2 py-1 bg-red-900/40 text-red-500 rounded-lg text-xs font-black border border-red-500/20">
+                                                            {debt} HARI
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-gray-600 text-xs">-</span>
+                                                    )}
+                                                </td>
                                                 <td className="py-4 align-middle">
                                                     <div className="flex justify-center">
                                                         {checkedIn ? (

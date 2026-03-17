@@ -65,8 +65,26 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     setError(null);
 
     try {
-      // Use credentials from the logged-in user
-      const recentTracks = await fetchRecentTracks(currentUser.lastFmUsername, currentUser.lastFmApiKey);
+      // Calculate timestamps for the selected date
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const from = Math.floor(startOfDay.getTime() / 1000);
+      
+      let to: number | undefined = undefined;
+      const isToday = selectedDate.toDateString() === new Date().toDateString();
+      if (!isToday) {
+        const endOfDay = new Date(selectedDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        to = Math.floor(endOfDay.getTime() / 1000);
+      }
+
+      // Use credentials from the logged-in user with date filtering
+      const recentTracks = await fetchRecentTracks(
+        currentUser.lastFmUsername, 
+        currentUser.lastFmApiKey,
+        from,
+        to
+      );
       
       const newMatches: Record<string, string> = {};
 
@@ -77,7 +95,23 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         const foundTrack = recentTracks.find(recent => {
           const rArtist = recent.artist['#text'].toLowerCase();
           const rTitle = recent.name.toLowerCase();
-          return rArtist.includes(tArtist) && rTitle.includes(tTitle);
+          
+          // Basic match
+          const isMatch = rArtist.includes(tArtist) && rTitle.includes(tTitle);
+          if (!isMatch) return false;
+
+          // Date check (Safety measure if API returns more than requested)
+          if (recent.date && recent.date.uts) {
+            const trackTime = parseInt(recent.date.uts);
+            // Check if trackTime is within [from, to]
+            if (trackTime < from) return false;
+            if (to && trackTime > to) return false;
+          } else if (recent['@attr']?.nowplaying === 'true') {
+            // Now playing is only valid for "Today"
+            if (!isToday) return false;
+          }
+
+          return true;
         });
 
         if (foundTrack) {
@@ -202,13 +236,11 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     );
   };
 
-  const getDatesForCurrentWeek = () => {
-    const today = new Date();
-    const currentDay = today.getDay(); // 0-6
+  const getDatesForLast7Days = () => {
     const dates = [];
-    for (let i = 0; i < 7; i++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() - currentDay + i);
+    for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
         dates.push(date);
     }
     return dates;
@@ -251,8 +283,9 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
       {/* Day Selector */}
       <div className="w-full mb-6 overflow-x-auto custom-scrollbar">
         <div className="flex gap-2 pb-2">
-          {getDatesForCurrentWeek().map((date, index) => {
+          {getDatesForLast7Days().map((date, index) => {
             const dateStr = date.toLocaleDateString();
+            const dayIndex = date.getDay();
             const today = new Date();
             today.setHours(0,0,0,0);
             const compareDate = new Date(date);
@@ -260,13 +293,11 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
             
             const isToday = compareDate.getTime() === today.getTime();
             const isFuture = compareDate > today;
-            const dayConfig = weeklySchedule[index];
+            const dayConfig = weeklySchedule[dayIndex];
             const hasTracks = dayConfig && dayConfig.tracks && dayConfig.tracks.length > 0;
             const isCheckedIn = currentUser.checkInHistory?.includes(dateStr);
             const isHutang = !isFuture && hasTracks && !isCheckedIn && !isToday;
             const isSelected = selectedDate.toDateString() === date.toDateString();
-
-            if (!hasTracks && isFuture) return null;
 
             return (
               <button
@@ -277,17 +308,24 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                   setSynced(false);
                 }}
                 disabled={isFuture}
-                className={`flex-shrink-0 px-4 py-2 rounded-xl whitespace-nowrap text-sm font-bold transition-all border ${
+                className={`flex-shrink-0 px-4 py-3 rounded-xl whitespace-nowrap text-sm font-bold transition-all border ${
                   isSelected 
-                    ? 'bg-white text-black border-white scale-105' 
+                    ? 'bg-white text-black border-white scale-105 shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
                     : 'bg-black/40 text-gray-400 border-white/10 hover:border-purple-500 hover:text-purple-300'
                 } ${isFuture ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                <div className="flex flex-col items-center">
-                  <span>{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][index]}</span>
-                  {isHutang && <span className="text-[10px] text-red-500 mt-1">Hutang</span>}
-                  {isCheckedIn && <span className="text-[10px] text-green-500 mt-1">Selesai</span>}
-                  {isToday && !isCheckedIn && <span className="text-[10px] text-blue-400 mt-1">Hari Ini</span>}
+                <div className="flex flex-col items-center gap-1">
+                  <span className="uppercase text-[10px] tracking-wider opacity-60">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayIndex]}</span>
+                  <span className="text-base">{date.getDate()}</span>
+                  {isHutang && (
+                    <span className="text-[9px] px-1.5 py-0.5 bg-red-500/20 text-red-500 rounded border border-red-500/30 font-black uppercase">Hutang</span>
+                  )}
+                  {isCheckedIn && (
+                    <span className="text-[9px] px-1.5 py-0.5 bg-green-500/20 text-green-500 rounded border border-green-500/30 font-black uppercase">Selesai</span>
+                  )}
+                  {isToday && !isCheckedIn && (
+                    <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded border border-blue-500/30 font-black uppercase">Today</span>
+                  )}
                 </div>
               </button>
             );
@@ -328,6 +366,19 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
             <h4 className="text-xs text-gray-400 font-bold uppercase mb-3 flex items-center gap-2">
                 <Music size={12} className="text-green-500" /> Target Playlist
             </h4>
+            
+            {/* Spotify Embed */}
+            <div className="mb-4 rounded-xl overflow-hidden border border-white/10 shadow-lg">
+                <iframe 
+                    src={`https://open.spotify.com/embed/playlist/${spotifyId}?utm_source=generator&theme=0`} 
+                    width="100%" 
+                    height="152" 
+                    frameBorder="0" 
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                    loading="lazy"
+                ></iframe>
+            </div>
+
             <a 
                 href={`https://open.spotify.com/playlist/${spotifyId}`}
                 target="_blank"
@@ -335,7 +386,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                 className="w-full py-3 px-4 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold flex items-center justify-center gap-2 transition-all shadow-[0_0_15px_rgba(29,185,84,0.4)] hover:scale-[1.02]"
             >
                 <Music size={20} fill="currentColor" />
-                Open Playlist in Spotify
+                Open in Spotify App
                 <ExternalLink size={16} className="opacity-60 ml-1" />
             </a>
         </div>
