@@ -366,18 +366,6 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
             <h4 className="text-xs text-gray-400 font-bold uppercase mb-3 flex items-center gap-2">
                 <Music size={12} className="text-green-500" /> Target Playlist
             </h4>
-            
-            {/* Spotify Embed */}
-            <div className="mb-4 rounded-xl overflow-hidden border border-white/10 shadow-lg">
-                <iframe 
-                    src={`https://open.spotify.com/embed/playlist/${spotifyId}?utm_source=generator&theme=0`} 
-                    width="100%" 
-                    height="152" 
-                    frameBorder="0" 
-                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
-                    loading="lazy"
-                ></iframe>
-            </div>
 
             <a 
                 href={`https://open.spotify.com/playlist/${spotifyId}`}
