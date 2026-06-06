@@ -326,8 +326,15 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                 } ${isFuture ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <div className="flex flex-col items-center gap-1">
-                  <span className="uppercase text-[10px] tracking-wider opacity-60">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayIndex]}</span>
-                  <span className="text-base">{date.getDate()}</span>
+                  <span className="uppercase text-[10px] tracking-wider opacity-60">
+                    {date.toLocaleDateString('id-ID', { weekday: 'short' })}
+                  </span>
+                  <span className="text-base font-black">
+                    {date.getDate()}
+                  </span>
+                  <span className="text-[10px] opacity-70">
+                    {date.toLocaleDateString('id-ID', { month: 'short' })}
+                  </span>
                   {isPending && (
                     <span className="text-[9px] px-1.5 py-0.5 bg-red-500/20 text-red-500 rounded border border-red-500/30 font-black uppercase">Pending</span>
                   )}
