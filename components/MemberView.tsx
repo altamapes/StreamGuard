@@ -49,6 +49,17 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const selectedDateStr = selectedDate.toLocaleDateString();
   const hasCheckedInSelectedDate = currentUser.checkInHistory?.includes(selectedDateStr) || false;
 
+  const realToday = new Date();
+  realToday.setHours(0,0,0,0);
+  const compareDateVal = new Date(selectedDate);
+  compareDateVal.setHours(0,0,0,0);
+  
+  const isPastDate = compareDateVal.getTime() < realToday.getTime();
+  const currentDayOfWeekVal = new Date().getDay();
+  const isWeekendVal = currentDayOfWeekVal === 0 || currentDayOfWeekVal === 6;
+  const isHutangDay = isPastDate && tracks.length > 0 && !hasCheckedInSelectedDate;
+  const isLockedHutang = isHutangDay && !isWeekendVal;
+
   const calculateProgress = () => {
     if (tracks.length === 0) return 0;
     const matchedCount = tracks.filter(t => matchedStatus[t.id]).length;
@@ -335,20 +346,27 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
 
       {/* Sync Button Only (No Inputs) */}
       <div className="w-full glass p-6 rounded-2xl mb-6 shadow-[0_0_30px_rgba(0,0,0,0.3)]">
-        <button 
-          onClick={handleSync}
-          disabled={isLoading}
-          className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
-            isLoading 
-              ? 'bg-gray-600 cursor-not-allowed' 
-              : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]'
-          }`}
-        >
-          <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
-          {isLoading ? 'Syncing...' : 'Check Streams'}
-        </button>
+        {isLockedHutang ? (
+            <div className="bg-red-900/30 border border-red-500/30 rounded-xl p-4 text-center">
+                <p className="text-red-400 font-bold mb-1">Fitur Pelunasan Terkunci</p>
+                <p className="text-red-300 text-sm">Pending Check-in (Hutang) hanya dapat diselesaikan pada hari Sabtu dan Minggu.</p>
+            </div>
+        ) : (
+            <button 
+              onClick={handleSync}
+              disabled={isLoading}
+              className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
+                isLoading 
+                  ? 'bg-gray-600 cursor-not-allowed' 
+                  : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]'
+              }`}
+            >
+              <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
+              {isLoading ? 'Syncing...' : 'Check Streams'}
+            </button>
+        )}
         
-        {error && (
+        {error && !isLockedHutang && (
             <div className="mt-3 flex items-center gap-2 text-red-400 text-sm bg-red-900/20 p-2 rounded-lg border border-red-500/20">
                 <AlertCircle size={16} />
                 {error}
