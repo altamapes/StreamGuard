@@ -3,6 +3,7 @@ import { Trash2, Save, ArrowLeft, Plus, Settings, Database, Cloud, CloudOff, Dow
 import { TargetTrack, CloudConfig, User, WeeklySchedule } from '../types';
 import { storageService } from '../services/storage';
 import { DEFAULT_CLOUD_CONFIG, DEFAULT_SPOTIFY_ID } from '../constants';
+import { AdminReportView } from './AdminReportView';
 
 interface AdminPanelProps {
   onExit: () => void;
@@ -11,7 +12,7 @@ interface AdminPanelProps {
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
-  const [activeTab, setActiveTab] = useState<'playlist' | 'users' | 'settings'>('playlist');
+  const [activeTab, setActiveTab] = useState<'playlist' | 'users' | 'report' | 'settings'>('playlist');
   
   // Weekly Schedule State
   const [schedule, setSchedule] = useState<WeeklySchedule>({});
@@ -75,7 +76,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
   // Fetch Users when switching to 'users' tab
   useEffect(() => {
-    if (activeTab === 'users') fetchUsers();
+    if (activeTab === 'users' || activeTab === 'report') fetchUsers();
   }, [activeTab]);
 
   const fetchUsers = async () => {
@@ -364,6 +365,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
             className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'users' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
         >
             <Users size={18} /> User Activity
+        </button>
+        <button 
+            onClick={() => setActiveTab('report')}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'report' ? 'bg-orange-600 text-white shadow-lg shadow-orange-900/40' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+        >
+            <BarChart3 size={18} /> Rekap Report
         </button>
         <button 
             onClick={() => setActiveTab('settings')}
@@ -670,6 +677,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                 )}
            </div>
         </div>
+      )}
+
+      {activeTab === 'report' && (
+         <AdminReportView users={usersList} schedule={schedule} />
       )}
 
       {activeTab === 'settings' && (
