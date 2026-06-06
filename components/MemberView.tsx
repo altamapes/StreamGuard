@@ -291,63 +291,33 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         </div>
       </div>
 
-      {/* Day Selector */}
-      <div className="w-full mb-6 overflow-x-auto custom-scrollbar">
-        <div className="flex gap-2 pb-2">
-          {getDatesForLast7Days().map((date, index) => {
-            const dateStr = date.toLocaleDateString();
-            const dayIndex = date.getDay();
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const compareDate = new Date(date);
-            compareDate.setHours(0,0,0,0);
-            
-            const isToday = compareDate.getTime() === today.getTime();
-            const isFuture = compareDate > today;
-            const dayConfig = weeklySchedule[dayIndex];
-            const hasTracks = dayConfig && dayConfig.tracks && dayConfig.tracks.length > 0;
-            const isCheckedIn = currentUser.checkInHistory?.includes(dateStr);
-            const isPending = !isFuture && hasTracks && !isCheckedIn && !isToday;
-            const isSelected = selectedDate.toDateString() === date.toDateString();
-
-            return (
-              <button
-                key={index}
-                onClick={() => {
-                  setSelectedDate(date);
-                  setMatchedStatus({}); // Reset matches when changing day
+      {/* Day Selector - Date Picker */}
+      <div className="w-full mb-6 glass p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 border border-white/10">
+        <div>
+           <h3 className="text-white font-bold mb-1">Pilih Tanggal</h3>
+           <p className="text-xs text-gray-400">Pilih tanggal untuk melihat target atau melunasi absen.</p>
+        </div>
+        <div className="relative w-full md:w-auto">
+          <input 
+            type="date"
+            max={new Date().toISOString().split('T')[0]} // Cannot select future dates natively via max attribute (using UTC as approx is close enough, or precise local below)
+            value={`${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`}
+            onChange={(e) => {
+              const d = new Date(e.target.value);
+              // Avoid invalid dates
+              if (!isNaN(d.getTime())) {
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                d.setHours(0,0,0,0);
+                if (d <= today) {
+                  setSelectedDate(d);
+                  setMatchedStatus({});
                   setSynced(false);
-                }}
-                disabled={isFuture}
-                className={`flex-shrink-0 px-4 py-3 rounded-xl whitespace-nowrap text-sm font-bold transition-all border ${
-                  isSelected 
-                    ? 'bg-white text-black border-white scale-105 shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
-                    : 'bg-black/40 text-gray-400 border-white/10 hover:border-purple-500 hover:text-purple-300'
-                } ${isFuture ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <span className="uppercase text-[10px] tracking-wider opacity-60">
-                    {date.toLocaleDateString('id-ID', { weekday: 'short' })}
-                  </span>
-                  <span className="text-base font-black">
-                    {date.getDate()}
-                  </span>
-                  <span className="text-[10px] opacity-70">
-                    {date.toLocaleDateString('id-ID', { month: 'short' })}
-                  </span>
-                  {isPending && (
-                    <span className="text-[9px] px-1.5 py-0.5 bg-red-500/20 text-red-500 rounded border border-red-500/30 font-black uppercase">Pending</span>
-                  )}
-                  {isCheckedIn && (
-                    <span className="text-[9px] px-1.5 py-0.5 bg-green-500/20 text-green-500 rounded border border-green-500/30 font-black uppercase">Selesai</span>
-                  )}
-                  {isToday && !isCheckedIn && (
-                    <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded border border-blue-500/30 font-black uppercase">Today</span>
-                  )}
-                </div>
-              </button>
-            );
-          })}
+                }
+              }
+            }}
+            className="w-full md:w-auto bg-black/50 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 font-bold"
+          />
         </div>
       </div>
 
