@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Clock, CalendarCheck, LogOut, User as UserIcon, X, Music, ExternalLink, Settings, Edit2, Save, Key, Lock, Link as LinkIcon, Headphones, Mic2, Eye } from 'lucide-react';
+import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Clock, CalendarCheck, LogOut, User as UserIcon, X, Music, ExternalLink, Settings, Edit2, Save, Key, Lock, Link as LinkIcon, Headphones, Mic2, Eye, MessageCircle } from 'lucide-react';
 import { TargetTrack, User, WeeklySchedule } from '../types';
 import { fetchRecentTracks } from '../services/lastFmService';
 import { storageService } from '../services/storage';
@@ -35,6 +35,11 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const [editPlaylistUrl, setEditPlaylistUrl] = useState('');
   const [editPersonalArtist, setEditPersonalArtist] = useState('');
   const [editPersonalTrack, setEditPersonalTrack] = useState('');
+  const [editPlaylistUrl2, setEditPlaylistUrl2] = useState('');
+  const [editPersonalArtist2, setEditPersonalArtist2] = useState('');
+  const [editPersonalTrack2, setEditPersonalTrack2] = useState('');
+  const [editWhatsappName, setEditWhatsappName] = useState('');
+  const [editWhatsappNumber, setEditWhatsappNumber] = useState('');
 
   // Day Selection State
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -179,6 +184,11 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     setEditPlaylistUrl(currentUser.personalPlaylistUrl || '');
     setEditPersonalArtist(currentUser.personalArtist || '');
     setEditPersonalTrack(currentUser.personalTrack || '');
+    setEditPlaylistUrl2(currentUser.personalPlaylistUrl2 || '');
+    setEditPersonalArtist2(currentUser.personalArtist2 || '');
+    setEditPersonalTrack2(currentUser.personalTrack2 || '');
+    setEditWhatsappName(currentUser.whatsappName || '');
+    setEditWhatsappNumber(currentUser.whatsappNumber || '');
     setIsEditingProfile(false);
     setIsProfileOpen(true);
   };
@@ -191,6 +201,11 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     setEditPlaylistUrl(currentUser.personalPlaylistUrl || '');
     setEditPersonalArtist(currentUser.personalArtist || '');
     setEditPersonalTrack(currentUser.personalTrack || '');
+    setEditPlaylistUrl2(currentUser.personalPlaylistUrl2 || '');
+    setEditPersonalArtist2(currentUser.personalArtist2 || '');
+    setEditPersonalTrack2(currentUser.personalTrack2 || '');
+    setEditWhatsappName(currentUser.whatsappName || '');
+    setEditWhatsappNumber(currentUser.whatsappNumber || '');
     setIsEditingProfile(true);
     setIsProfileOpen(true);
   };
@@ -204,7 +219,12 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         password: editPassword,
         personalPlaylistUrl: editPlaylistUrl,
         personalArtist: editPersonalArtist,
-        personalTrack: editPersonalTrack
+        personalTrack: editPersonalTrack,
+        personalPlaylistUrl2: editPlaylistUrl2,
+        personalArtist2: editPersonalArtist2,
+        personalTrack2: editPersonalTrack2,
+        whatsappName: editWhatsappName,
+        whatsappNumber: editWhatsappNumber
       };
       
       const updatedUser = await storageService.updateUserProfile(currentUser.id, updates);
@@ -528,8 +548,32 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                 {isEditingProfile ? (
                   /* EDIT MODE */
                   <div className="mt-8 space-y-4 animate-fade-in">
+                     <div className="flex gap-2">
+                        <div className="flex-1">
+                            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Nama WA</label>
+                            <input 
+                                type="text"
+                                value={editWhatsappName}
+                                onChange={(e) => setEditWhatsappName(e.target.value)}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-green-500 focus:outline-none placeholder-gray-600 text-sm"
+                                placeholder="Nama WA"
+                            />
+                        </div>
+                        <div className="flex-1">
+                            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Nomor WA</label>
+                            <input 
+                                type="text"
+                                value={editWhatsappNumber}
+                                onChange={(e) => setEditWhatsappNumber(e.target.value)}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white focus:border-green-500 focus:outline-none placeholder-gray-600 text-sm"
+                                placeholder="Nomor WA (contoh: 0812...)"
+                            />
+                        </div>
+                     </div>
+                     <div className="border-t border-white/10 my-4"></div>
+
                      <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase block mb-1">My Music</label>
+                        <label className="text-xs font-bold text-gray-500 uppercase block mb-1">My Music 1</label>
                         <div className="space-y-2">
                             {/* Artist Input */}
                             <div className="relative">
@@ -539,7 +583,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                                     value={editPersonalArtist}
                                     onChange={(e) => setEditPersonalArtist(e.target.value)}
                                     className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white focus:border-green-500 focus:outline-none placeholder-gray-600 text-sm"
-                                    placeholder="Artist Name"
+                                    placeholder="Artist Name 1"
                                 />
                             </div>
                             {/* Track Input */}
@@ -550,7 +594,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                                     value={editPersonalTrack}
                                     onChange={(e) => setEditPersonalTrack(e.target.value)}
                                     className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white focus:border-green-500 focus:outline-none placeholder-gray-600 text-sm"
-                                    placeholder="Track Title"
+                                    placeholder="Track Title 1"
                                 />
                             </div>
                             {/* Link Input */}
@@ -561,7 +605,48 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                                     value={editPlaylistUrl}
                                     onChange={(e) => setEditPlaylistUrl(e.target.value)}
                                     className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white focus:border-green-500 focus:outline-none placeholder-gray-600 text-sm"
-                                    placeholder="Spotify Link (https://...)"
+                                    placeholder="Spotify Link 1 (https://...)"
+                                />
+                            </div>
+                        </div>
+                     </div>
+
+                     <div className="border-t border-white/10 my-4"></div>
+
+                     <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase block mb-1">My Music 2</label>
+                        <div className="space-y-2">
+                            {/* Artist Input */}
+                            <div className="relative">
+                                <Mic2 className="absolute left-3 top-3 text-gray-500" size={16} />
+                                <input 
+                                    type="text"
+                                    value={editPersonalArtist2}
+                                    onChange={(e) => setEditPersonalArtist2(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white focus:border-green-500 focus:outline-none placeholder-gray-600 text-sm"
+                                    placeholder="Artist Name 2"
+                                />
+                            </div>
+                            {/* Track Input */}
+                            <div className="relative">
+                                <Music className="absolute left-3 top-3 text-gray-500" size={16} />
+                                <input 
+                                    type="text"
+                                    value={editPersonalTrack2}
+                                    onChange={(e) => setEditPersonalTrack2(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white focus:border-green-500 focus:outline-none placeholder-gray-600 text-sm"
+                                    placeholder="Track Title 2"
+                                />
+                            </div>
+                            {/* Link Input */}
+                            <div className="relative">
+                                <LinkIcon className="absolute left-3 top-3 text-gray-500" size={16} />
+                                <input 
+                                    type="text"
+                                    value={editPlaylistUrl2}
+                                    onChange={(e) => setEditPlaylistUrl2(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white focus:border-green-500 focus:outline-none placeholder-gray-600 text-sm"
+                                    placeholder="Spotify Link 2 (https://...)"
                                 />
                             </div>
                         </div>
@@ -627,13 +712,27 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                   /* VIEW MODE */
                   <div className="mt-8 space-y-4">
                      
+                     {/* WhatsApp Details */}
+                     {(currentUser.whatsappName || currentUser.whatsappNumber) && (
+                         <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
+                            <div className="w-10 h-10 rounded-full bg-green-900/20 text-green-400 flex items-center justify-center border border-green-500/20 shrink-0">
+                               <MessageCircle size={20} />
+                            </div>
+                            <div className="overflow-hidden">
+                               <div className="text-xs text-gray-500 font-bold uppercase truncate">WhatsApp</div>
+                               <div className="font-bold text-white truncate">{currentUser.whatsappName || 'No Name'}</div>
+                               <div className="text-sm text-gray-400 font-mono truncate">{currentUser.whatsappNumber || '-'}</div>
+                            </div>
+                         </div>
+                     )}
+
                      {/* Personal Music Link */}
                      <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
                         <div className="w-10 h-10 rounded-full bg-blue-900/20 text-blue-400 flex items-center justify-center border border-blue-500/20 shrink-0">
                            <Headphones size={20} />
                         </div>
                         <div className="overflow-hidden w-full">
-                           <div className="text-xs text-gray-500 font-bold uppercase truncate mb-0.5">My Music</div>
+                           <div className="text-xs text-gray-500 font-bold uppercase truncate mb-0.5">My Music 1</div>
                            {currentUser.personalPlaylistUrl ? (
                                <a 
                                  href={currentUser.personalPlaylistUrl}
@@ -652,6 +751,45 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                                    {/* Fallback if no artist/track but url exists */}
                                    {!currentUser.personalTrack && !currentUser.personalArtist && (
                                        <div className="text-xs text-blue-500 flex items-center gap-1 mt-1">
+                                           Open Link <ExternalLink size={10} />
+                                       </div>
+                                   )}
+                               </a>
+                           ) : (
+                               <button 
+                                onClick={() => setIsEditingProfile(true)}
+                                className="text-sm text-gray-500 italic hover:text-white transition-colors text-left"
+                               >
+                                   Tap to set your music...
+                               </button>
+                           )}
+                        </div>
+                     </div>
+
+                     {/* Personal Music Link 2 */}
+                     <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
+                        <div className="w-10 h-10 rounded-full bg-purple-900/20 text-purple-400 flex items-center justify-center border border-purple-500/20 shrink-0">
+                           <Headphones size={20} />
+                        </div>
+                        <div className="overflow-hidden w-full">
+                           <div className="text-xs text-gray-500 font-bold uppercase truncate mb-0.5">My Music 2</div>
+                           {currentUser.personalPlaylistUrl2 ? (
+                               <a 
+                                 href={currentUser.personalPlaylistUrl2}
+                                 target="_blank"
+                                 rel="noopener noreferrer" 
+                                 className="group block"
+                               >
+                                   <div className="font-bold text-purple-400 group-hover:text-purple-300 group-hover:underline truncate text-lg leading-tight">
+                                       {currentUser.personalTrack2 || 'My Playlist'}
+                                   </div>
+                                   {currentUser.personalArtist2 && (
+                                       <div className="text-sm text-gray-400 truncate">
+                                           {currentUser.personalArtist2}
+                                       </div>
+                                   )}
+                                   {!currentUser.personalTrack2 && !currentUser.personalArtist2 && (
+                                       <div className="text-xs text-purple-500 flex items-center gap-1 mt-1">
                                            Open Link <ExternalLink size={10} />
                                        </div>
                                    )}

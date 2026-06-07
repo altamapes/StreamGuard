@@ -43,6 +43,11 @@ export interface User {
   personalPlaylistUrl?: string; // Optional: User's personal Spotify link
   personalArtist?: string; // Optional: Artist name for display
   personalTrack?: string; // Optional: Track title for display
+  personalPlaylistUrl2?: string;
+  personalArtist2?: string;
+  personalTrack2?: string;
+  whatsappName?: string;
+  whatsappNumber?: string;
 }
 
 export interface CloudConfig {
