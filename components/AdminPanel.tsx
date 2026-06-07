@@ -1078,17 +1078,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                             )}
 
                             {userHistory && (
-                                <div className="space-y-3 mt-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-3">
+                                <div className="space-y-3 mt-4 max-h-[300px] overflow-y-auto overflow-x-hidden custom-scrollbar pr-3">
                                     {userHistory.length === 0 ? (
                                         <p className="text-xs text-gray-500 italic text-center py-2">No recent tracks found.</p>
                                     ) : (
                                         userHistory.map((track, i) => (
-                                            <div key={i} className="flex gap-3 items-center bg-black/20 p-2 rounded-lg border border-white/5">
+                                            <div key={i} className="flex gap-3 items-center bg-black/20 p-3 rounded-lg border border-white/5">
                                                 <div className="w-8 h-8 rounded shrink-0 bg-purple-900/40 flex flex-col items-center justify-center border border-purple-500/20">
                                                     <Music size={14} className="text-purple-400" />
                                                 </div>
-                                                <div className="flex-1 overflow-hidden">
-                                                    <div className="text-sm font-bold text-white truncate">{track.name}</div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-sm font-bold text-white break-words leading-tight mb-0.5">{track.name}</div>
                                                     <div className="text-xs text-gray-400 truncate">{track.artist?.['#text']}</div>
                                                 </div>
                                                 {track.date && track.date['#text'] && (
