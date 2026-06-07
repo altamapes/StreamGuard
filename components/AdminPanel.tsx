@@ -1078,7 +1078,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                             )}
 
                             {userHistory && (
-                                <div className="space-y-3 mt-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                                <div className="space-y-3 mt-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-3">
                                     {userHistory.length === 0 ? (
                                         <p className="text-xs text-gray-500 italic text-center py-2">No recent tracks found.</p>
                                     ) : (
