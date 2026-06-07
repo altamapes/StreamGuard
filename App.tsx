@@ -60,14 +60,10 @@ function App() {
   };
 
   // Auth Handlers
-  const handleRegister = async (newUser: User) => {
-    try {
-      await storageService.registerUser(newUser);
-      setCurrentUser(newUser);
-      setViewMode(ViewMode.MEMBER);
-    } catch (error: any) {
-      alert(error.message);
-    }
+  const handleRegister = (newUser: User) => {
+    // AuthView already handles the storageService.registerUser call
+    setCurrentUser(newUser);
+    setViewMode(ViewMode.MEMBER);
   };
 
   const handleLogin = (user: User) => {
