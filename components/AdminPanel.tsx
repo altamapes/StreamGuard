@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Trash2, Save, ArrowLeft, Plus, Settings, Database, Cloud, CloudOff, Download, Upload, ListMusic, Loader2, RefreshCw, Users, CheckCircle2, Clock, Music, Search, Filter, XCircle, BarChart3, Calendar, Copy, Key, Lock, ShieldCheck, Eye, X, User as UserIcon, Link as LinkIcon, Headphones, CalendarCheck, MessageCircle } from 'lucide-react';
-import { TargetTrack, CloudConfig, User, WeeklySchedule } from '../types';
+import { TargetTrack, CloudConfig, User, WeeklySchedule, LastFmTrack } from '../types';
 import { storageService } from '../services/storage';
+import { fetchRecentTracks } from '../services/lastFmService';
 import { DEFAULT_CLOUD_CONFIG, DEFAULT_SPOTIFY_ID } from '../constants';
 import { AdminReportView } from './AdminReportView';
 
@@ -32,6 +33,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'checked' | 'missing'>('all');
   const [viewingUser, setViewingUser] = useState<User | null>(null); // State for modal
+  const [userHistory, setUserHistory] = useState<LastFmTrack[] | null>(null);
+  const [isFetchingHistory, setIsFetchingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   // Settings State
   const [cloudConfig, setCloudConfig] = useState<CloudConfig>({ enabled: false, binId: '', apiKey: '' });
@@ -88,6 +92,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         console.error("Failed to fetch users", e);
     } finally {
         setIsLoadingUsers(false);
+    }
+  };
+
+  const handleFetchHistory = async (user: User) => {
+    setIsFetchingHistory(true);
+    setHistoryError(null);
+    setUserHistory(null);
+
+    const targetDateStr = user.lastCheckInDate || new Date().toLocaleDateString('en-GB');
+    // Using current time or end of the target date conceptually
+    // To simplify for this view, we'll fetch the last 50 tracks
+    try {
+      const tracks = await fetchRecentTracks(user.lastFmUsername, user.lastFmApiKey, undefined, undefined, 50);
+      setUserHistory(tracks);
+    } catch (e: any) {
+      setHistoryError(e.message || 'Failed to fetch history.');
+    } finally {
+      setIsFetchingHistory(false);
     }
   };
 
@@ -870,7 +892,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                 {/* Header (Shrink-0) */}
                 <div className="h-28 bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 relative shrink-0">
                     <button 
-                        onClick={() => setViewingUser(null)}
+                        onClick={() => {
+                            setViewingUser(null);
+                            setUserHistory(null);
+                            setHistoryError(null);
+                        }}
                         className="absolute top-4 right-4 bg-black/30 p-2 rounded-full text-white hover:bg-black/50 transition-colors z-10"
                     >
                         <X size={20} />
@@ -1020,6 +1046,60 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                 </div>
                             ) : (
                                 <div className="text-sm text-gray-500 italic">User hasn't set their music 2 yet.</div>
+                            )}
+                        </div>
+
+                        {/* User Listening History */}
+                        <div className="glass p-4 rounded-xl border border-white/5 mt-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h4 className="text-gray-400 text-xs font-bold uppercase flex items-center gap-2">
+                                    <ListMusic size={12} /> Listening History (Recent)
+                                </h4>
+                                <button 
+                                    onClick={() => handleFetchHistory(viewingUser)}
+                                    disabled={isFetchingHistory || !viewingUser.lastFmApiKey}
+                                    className="px-3 py-1 bg-white/5 hover:bg-white/10 text-white rounded text-xs transition-colors flex items-center gap-1 disabled:opacity-50"
+                                >
+                                    {isFetchingHistory ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                                    Fetch
+                                </button>
+                            </div>
+
+                            {!viewingUser.lastFmApiKey && (
+                                <div className="text-xs text-orange-400 bg-orange-900/20 p-2 rounded border border-orange-500/20">
+                                    User API Key is missing. Cannot fetch History.
+                                </div>
+                            )}
+
+                            {historyError && (
+                                <div className="text-xs text-red-400 bg-red-900/20 p-2 rounded border border-red-500/20 mt-2">
+                                    {historyError}
+                                </div>
+                            )}
+
+                            {userHistory && (
+                                <div className="space-y-3 mt-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                                    {userHistory.length === 0 ? (
+                                        <p className="text-xs text-gray-500 italic text-center py-2">No recent tracks found.</p>
+                                    ) : (
+                                        userHistory.map((track, i) => (
+                                            <div key={i} className="flex gap-3 items-center bg-black/20 p-2 rounded-lg border border-white/5">
+                                                <div className="w-8 h-8 rounded shrink-0 bg-purple-900/40 flex flex-col items-center justify-center border border-purple-500/20">
+                                                    <Music size={14} className="text-purple-400" />
+                                                </div>
+                                                <div className="flex-1 overflow-hidden">
+                                                    <div className="text-sm font-bold text-white truncate">{track.name}</div>
+                                                    <div className="text-xs text-gray-400 truncate">{track.artist?.['#text']}</div>
+                                                </div>
+                                                {track.date && track.date['#text'] && (
+                                                    <div className="text-[10px] text-gray-500 shrink-0 text-right">
+                                                        {track.date['#text']}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             )}
                         </div>
 
