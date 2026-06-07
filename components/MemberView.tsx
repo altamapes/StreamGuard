@@ -18,6 +18,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const [synced, setSynced] = useState(false);
   
   const [matchedStatus, setMatchedStatus] = useState<Record<string, string>>({});
+  const [syncPlayCount, setSyncPlayCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [showReward, setShowReward] = useState(false);
 
@@ -102,13 +103,14 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         to
       );
       
+      let minPlayCount = Infinity;
       const newMatches: Record<string, string> = {};
 
       tracks.forEach(target => {
         const tArtist = target.artist.toLowerCase();
         const tTitle = target.title.toLowerCase();
 
-        const foundTrack = recentTracks.find(recent => {
+        const foundTracks = recentTracks.filter(recent => {
           const rArtist = recent.artist['#text'].toLowerCase().trim();
           const rTitle = recent.name.toLowerCase().trim();
           
@@ -142,6 +144,12 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
           return true;
         });
 
+        if (foundTracks.length < minPlayCount) {
+          minPlayCount = foundTracks.length;
+        }
+
+        const foundTrack = foundTracks[0];
+
         if (foundTrack) {
           let timeDisplay = 'Just now';
           if (foundTrack.date && foundTrack.date.uts) {
@@ -162,6 +170,11 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         }
       });
 
+      if (tracks.length === 0) {
+        minPlayCount = 0;
+      }
+
+      setSyncPlayCount(minPlayCount);
       setMatchedStatus(newMatches);
       setSynced(true);
     } catch (err: any) {
@@ -171,9 +184,54 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     }
   };
 
-  const handleClaim = () => {
-    onCheckIn(selectedDateStr); 
+  const pointsAvailable = Math.max(0, syncPlayCount - 1);
+  const claimedBefore = currentUser.extraPointsClaimedDates?.[selectedDateStr] || 0;
+  const pointsToClaim = Math.max(0, pointsAvailable - claimedBefore);
+
+  const handleClaim = async () => {
+    // Regular check-in
+    if (!hasCheckedInSelectedDate) {
+      onCheckIn(selectedDateStr); 
+    }
+    
+    // Extra points
+    if (pointsToClaim > 0) {
+      try {
+        const newBalance = (currentUser.extraPointsBalance || 0) + pointsToClaim;
+        const newClaimedDates = { ...(currentUser.extraPointsClaimedDates || {}) };
+        newClaimedDates[selectedDateStr] = pointsAvailable;
+
+        const updatedUser = await storageService.updateUserProfile(currentUser.id, {
+          extraPointsBalance: newBalance,
+          extraPointsClaimedDates: newClaimedDates
+        });
+        onUpdateUser(updatedUser);
+      } catch (e) {
+        console.error('Failed to claim points:', e);
+      }
+    }
+    
     setShowReward(true);
+  };
+
+  const handlePatchAbsence = async () => {
+    if (!currentUser.extraPointsBalance || currentUser.extraPointsBalance <= 0) return;
+    try {
+      const newBalance = currentUser.extraPointsBalance - 1;
+      const newPatchedDates = [...(currentUser.patchedDates || []), selectedDateStr];
+      const history = [...(currentUser.checkInHistory || [])];
+      if (!history.includes(selectedDateStr)) history.push(selectedDateStr);
+
+      const updatedUser = await storageService.updateUserProfile(currentUser.id, {
+        extraPointsBalance: newBalance,
+        patchedDates: newPatchedDates,
+        checkInHistory: history
+      });
+      onUpdateUser(updatedUser);
+      setShowReward(true);
+    } catch (e) {
+      console.error('Failed to patch absence:', e);
+    }
   };
 
   // Profile Handlers
@@ -244,7 +302,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const isComplete = progress === 100 && tracks.length > 0;
 
   const renderButton = () => {
-    if (hasCheckedInSelectedDate) {
+    if (hasCheckedInSelectedDate && pointsToClaim <= 0) {
       return (
         <button 
           disabled
@@ -256,14 +314,14 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
       );
     }
 
-    if (isComplete) {
+    if (isComplete || pointsToClaim > 0) {
       return (
         <button 
           onClick={handleClaim}
           className="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all duration-500 bg-gradient-to-r from-neon-purple to-pink-600 text-white shadow-[0_0_30px_rgba(176,38,255,0.6)] scale-100 hover:scale-[1.02] cursor-pointer"
         >
           <Trophy size={24} className="text-yellow-300" />
-          CLAIM CHECK-IN
+          {pointsToClaim > 0 && hasCheckedInSelectedDate ? `CLAIM ${pointsToClaim} EXTRA SAVINGS POINTS` : 'CLAIM CHECK-IN'}
         </button>
       );
     }
@@ -293,7 +351,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     <div className="w-full max-w-md mx-auto p-4 flex flex-col items-center">
       
       {/* User Header */}
-      <div className="w-full flex justify-between items-center mb-6 bg-white/5 p-4 rounded-2xl border border-white/10 hover:bg-white/10 transition-colors cursor-pointer" onClick={openProfile}>
+      <div className="w-full flex justify-between items-center mb-4 bg-white/5 p-4 rounded-2xl border border-white/10 hover:bg-white/10 transition-colors cursor-pointer" onClick={openProfile}>
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center font-bold text-xl uppercase shadow-lg shadow-purple-500/20 shrink-0">
             {currentUser.appUsername.charAt(0)}
@@ -306,19 +364,24 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div 
-            className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-            title="View Profile"
-          >
-            <Eye size={20} />
+        <div className="flex flex-col items-end gap-2">
+          <div className="bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+            <Trophy size={12} /> Tabungan: {currentUser.extraPointsBalance || 0}
           </div>
-          <div 
-            className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-            title="Settings"
-            onClick={openSettings}
-          >
-            <Settings size={20} />
+          <div className="flex items-center gap-2">
+            <div 
+              className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+              title="View Profile"
+            >
+              <Eye size={16} />
+            </div>
+            <div 
+              className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+              title="Settings"
+              onClick={openSettings}
+            >
+              <Settings size={16} />
+            </div>
           </div>
         </div>
       </div>
@@ -361,18 +424,33 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                 <p className="text-red-300 text-sm">Pending Check-in (Hutang) hanya dapat diselesaikan pada hari Sabtu dan Minggu.</p>
             </div>
         ) : (
-            <button 
-              onClick={handleSync}
-              disabled={isLoading}
-              className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
-                isLoading 
-                  ? 'bg-gray-600 cursor-not-allowed' 
-                  : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]'
-              }`}
-            >
-              <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
-              {isLoading ? 'Syncing...' : 'Check Streams'}
-            </button>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={handleSync}
+                disabled={isLoading}
+                className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
+                  isLoading 
+                    ? 'bg-gray-600 cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]'
+                }`}
+              >
+                <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
+                {isLoading ? 'Syncing...' : 'Check Streams'}
+              </button>
+              
+              {!hasCheckedInSelectedDate && 
+               selectedDateStr !== new Date().toLocaleDateString() && 
+               (currentUser.extraPointsBalance || 0) > 0 && (
+                <button 
+                  onClick={handlePatchAbsence}
+                  className="w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-yellow-600 hover:bg-yellow-500 text-white shadow-[0_0_15px_rgba(202,138,4,0.3)] border border-yellow-500/50"
+                  title="Gunakan 1 tabungan untuk menambal absen hari ini tanpa limit validasi."
+                >
+                  <Trophy size={18} />
+                  Tambal Absen (Gunakan 1 Tabungan)
+                </button>
+              )}
+            </div>
         )}
         
         {error && !isLockedHutang && (

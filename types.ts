@@ -48,6 +48,9 @@ export interface User {
   personalTrack2?: string;
   whatsappName?: string;
   whatsappNumber?: string;
+  extraPointsBalance?: number; // Current balance of extra points
+  extraPointsClaimedDates?: Record<string, number>; // Maps date string to number of extra points extracted from it
+  patchedDates?: string[]; // Dates that were patched using extra points
 }
 
 export interface CloudConfig {
