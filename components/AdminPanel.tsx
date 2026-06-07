@@ -335,8 +335,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   // --- FILTER & STATS LOGIC ---
   const getFilteredUsers = () => {
     return usersList.filter(user => {
+      const allLastFmUsernames = [
+         user.lastFmUsername,
+         ...(user.lastFmAccounts?.map(a => a.username) || [])
+      ].join(' ').toLowerCase();
+
       const matchesSearch = user.appUsername.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            user.lastFmUsername.toLowerCase().includes(searchQuery.toLowerCase());
+                            allLastFmUsernames.includes(searchQuery.toLowerCase());
       const checkedIn = isCheckedInToday(user);
       if (filterStatus === 'checked') return matchesSearch && checkedIn;
       if (filterStatus === 'missing') return matchesSearch && !checkedIn;
@@ -644,7 +649,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                                 <td className={`py-4 pl-2 align-middle font-bold ${checkedIn ? 'text-white' : 'text-red-400'}`}>
                                                     {user.appUsername}
                                                 </td>
-                                                <td className="py-4 align-middle text-gray-400 text-sm font-mono">{user.lastFmUsername}</td>
+                                                <td className="py-4 align-middle text-gray-400 text-[10px] font-mono leading-tight">
+                                                    <div>{user.lastFmUsername}</div>
+                                                    {user.lastFmAccounts && user.lastFmAccounts.length > 1 && (
+                                                        <div className="text-gray-500 mt-1">
+                                                            +{user.lastFmAccounts.length - 1} alt
+                                                        </div>
+                                                    )}
+                                                </td>
                                                 <td className="py-4 align-middle text-center text-yellow-500 font-bold">
                                                     {user.extraPointsBalance || 0}
                                                 </td>

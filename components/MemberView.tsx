@@ -385,7 +385,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
             {currentUser.appUsername.charAt(0)}
           </div>
           <div className="flex flex-col">
-            <div className="text-xs text-gray-400">Welcome back,</div>
+            <div className="text-xs text-gray-400">MPC Indie Trending</div>
             <div className="font-bold text-white text-lg leading-tight">{currentUser.appUsername}</div>
             <div className="text-[10px] text-neon-green mt-0.5 flex items-center gap-1 opacity-80">
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Online
