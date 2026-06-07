@@ -104,14 +104,26 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         const tTitle = target.title.toLowerCase();
 
         const foundTrack = recentTracks.find(recent => {
-          const rArtist = recent.artist['#text'].toLowerCase();
-          const rTitle = recent.name.toLowerCase();
+          const rArtist = recent.artist['#text'].toLowerCase().trim();
+          const rTitle = recent.name.toLowerCase().trim();
           
-          // Basic match
-          const isMatch = rArtist.includes(tArtist) && rTitle.includes(tTitle);
-          if (!isMatch) return false;
+          // Improved Matching Logic
+          // 1. Title matching (should be quite strict but trim-friendly)
+          const titleMatch = rTitle === tTitle || rTitle.includes(tTitle) || tTitle.includes(rTitle);
+          if (!titleMatch) return false;
 
-          // Date check (Safety measure if API returns more than requested)
+          // 2. Artist matching (flexible for multiple artists separated by commas/&/feat)
+          // We check if the target artist string is in the scrobbled artist string, or vice versa.
+          // We also check if the first artist in a comma-separated list matches.
+          const artistMatch = 
+            rArtist === tArtist || 
+            rArtist.includes(tArtist) || 
+            tArtist.includes(rArtist) ||
+            rArtist.split(',')[0].trim() === tArtist.split(',')[0].trim();
+
+          if (!artistMatch) return false;
+
+          // 3. Date check (Safety measure if API returns more than requested)
           if (recent.date && recent.date.uts) {
             const trackTime = parseInt(recent.date.uts);
             // Check if trackTime is within [from, to]
