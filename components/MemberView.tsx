@@ -394,7 +394,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-            <Trophy size={12} /> Tabungan: {currentUser.extraPointsBalance || 0}
+            <Trophy size={12} /> Savings: {currentUser.extraPointsBalance || 0}
           </div>
           <div className="flex items-center gap-2">
             <div 
@@ -417,8 +417,8 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
       {/* Day Selector - Date Picker */}
       <div className="w-full mb-6 glass p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 border border-white/10">
         <div>
-           <h3 className="text-white font-bold mb-1">Pilih Tanggal</h3>
-           <p className="text-xs text-gray-400">Pilih tanggal untuk melihat target atau melunasi absen.</p>
+           <h3 className="text-white font-bold mb-1">Select Date</h3>
+           <p className="text-xs text-gray-400">Select a date to view targets or clear absences.</p>
         </div>
         <div className="relative w-full md:w-auto">
           <input 

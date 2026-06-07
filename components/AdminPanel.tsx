@@ -627,7 +627,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                 <tr className="text-gray-400 border-b border-white/10 text-sm uppercase tracking-wider">
                                     <th className="pb-3 pl-2 pt-2">App User</th>
                                     <th className="pb-3 pt-2">Last.fm</th>
-                                    <th className="pb-3 text-center pt-2">Tabungan</th>
+                                    <th className="pb-3 text-center pt-2">Savings</th>
                                     <th className="pb-3 text-center pt-2">Pending</th>
                                     <th className="pb-3 text-center pt-2">Status</th>
                                     <th className="pb-3 text-right pr-2 pt-2">Action</th>
@@ -914,9 +914,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="text-[10px] text-gray-500 block">Tabungan Poin</label>
+                                    <label className="text-[10px] text-gray-500 block">Points Savings</label>
                                     <div className="text-sm font-medium text-yellow-500 font-bold">
-                                        {viewingUser.extraPointsBalance || 0} Poin
+                                        {viewingUser.extraPointsBalance || 0} Points
                                     </div>
                                 </div>
                                 <div>
