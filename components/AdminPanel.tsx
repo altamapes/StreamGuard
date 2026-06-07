@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Save, ArrowLeft, Plus, Settings, Database, Cloud, CloudOff, Download, Upload, ListMusic, Loader2, RefreshCw, Users, CheckCircle2, Clock, Music, Search, Filter, XCircle, BarChart3, Calendar, Copy, Key, Lock, ShieldCheck, Eye, X, User as UserIcon, Link as LinkIcon, Headphones, CalendarCheck } from 'lucide-react';
+import { Trash2, Save, ArrowLeft, Plus, Settings, Database, Cloud, CloudOff, Download, Upload, ListMusic, Loader2, RefreshCw, Users, CheckCircle2, Clock, Music, Search, Filter, XCircle, BarChart3, Calendar, Copy, Key, Lock, ShieldCheck, Eye, X, User as UserIcon, Link as LinkIcon, Headphones, CalendarCheck, MessageCircle } from 'lucide-react';
 import { TargetTrack, CloudConfig, User, WeeklySchedule } from '../types';
 import { storageService } from '../services/storage';
 import { DEFAULT_CLOUD_CONFIG, DEFAULT_SPOTIFY_ID } from '../constants';
@@ -889,10 +889,35 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                             </div>
                         </div>
 
+                        {/* WhatsApp Details */}
+                        <div className="glass p-4 rounded-xl border border-white/5">
+                            <h4 className="text-gray-400 text-xs font-bold uppercase mb-3 flex items-center gap-2">
+                                <MessageCircle size={12} /> WhatsApp Contact
+                            </h4>
+                            {(viewingUser.whatsappName || viewingUser.whatsappNumber) ? (
+                                <div className="grid gap-3">
+                                    <div>
+                                        <label className="text-[10px] text-gray-500 block">Nama WA</label>
+                                        <div className="text-sm font-medium text-white">
+                                            {viewingUser.whatsappName || '-'}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] text-gray-500 block">Nomor WA</label>
+                                        <div className="text-sm font-mono text-green-400 font-bold">
+                                            {viewingUser.whatsappNumber || '-'}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-sm text-gray-500 italic">User hasn't set their WhatsApp details yet.</div>
+                            )}
+                        </div>
+
                         {/* Personal Music */}
                         <div className="glass p-4 rounded-xl border border-white/5">
                             <h4 className="text-gray-400 text-xs font-bold uppercase mb-3 flex items-center gap-2">
-                                <Headphones size={12} /> Personal Music
+                                <Headphones size={12} /> Personal Music 1
                             </h4>
                             {viewingUser.personalPlaylistUrl ? (
                                 <div className="space-y-2">
@@ -919,7 +944,38 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                     </a>
                                 </div>
                             ) : (
-                                <div className="text-sm text-gray-500 italic">User hasn't set their music yet.</div>
+                                <div className="text-sm text-gray-500 italic">User hasn't set their music 1 yet.</div>
+                            )}
+
+                            <h4 className="text-gray-400 text-xs font-bold uppercase mb-3 mt-6 flex items-center gap-2">
+                                <Headphones size={12} /> Personal Music 2
+                            </h4>
+                            {viewingUser.personalPlaylistUrl2 ? (
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-10 h-10 rounded bg-purple-900/20 flex items-center justify-center text-purple-400 border border-purple-500/20">
+                                            <Music size={18} />
+                                        </div>
+                                        <div className="overflow-hidden">
+                                            <div className="text-sm font-bold text-white truncate">
+                                                {viewingUser.personalTrack2 || 'Unknown Track'}
+                                            </div>
+                                            <div className="text-xs text-gray-400 truncate">
+                                                {viewingUser.personalArtist2 || 'Unknown Artist'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <a 
+                                        href={viewingUser.personalPlaylistUrl2}
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-purple-400 hover:text-purple-300 hover:underline flex items-center gap-1 break-all"
+                                    >
+                                        <LinkIcon size={10} /> {viewingUser.personalPlaylistUrl2}
+                                    </a>
+                                </div>
+                            ) : (
+                                <div className="text-sm text-gray-500 italic">User hasn't set their music 2 yet.</div>
                             )}
                         </div>
 
