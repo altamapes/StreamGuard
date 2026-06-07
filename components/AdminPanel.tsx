@@ -519,11 +519,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                         No tracks set for {DAYS[selectedDayIndex]}.
                     </p>
                 ) : (
-                    currentTracks.map((track) => (
+                    currentTracks.map((track, index) => (
                     <div key={track.id} className="flex items-center justify-between p-4 bg-black/30 rounded-xl border border-white/5 hover:border-purple-500/30 transition-all">
-                        <div>
-                        <div className="font-bold text-white">{track.title}</div>
-                        <div className="text-sm text-gray-400">{track.artist}</div>
+                        <div className="flex items-center gap-4">
+                            <div className="w-8 h-8 rounded-full bg-purple-900/30 text-purple-400 flex items-center justify-center font-bold text-sm shrink-0 border border-purple-500/20">
+                                {index + 1}
+                            </div>
+                            <div>
+                                <div className="font-bold text-white">{track.title}</div>
+                                <div className="text-sm text-gray-400">{track.artist}</div>
+                            </div>
                         </div>
                         <button 
                         onClick={() => handleRemoveTrack(track.id)}
