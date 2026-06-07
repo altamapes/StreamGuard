@@ -83,7 +83,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin, onRegister, onOpenA
           StreamGuard
         </h1>
         <p className="text-purple-200 opacity-80 font-medium">
-          {isRegistering ? 'Create your Community Profile' : 'Welcome Back, Streamer'}
+          {isRegistering ? 'Create your Community Profile' : 'MPC Indie Trending'}
         </p>
         
         {/* Status Indicator Only - No Click/Edit */}
