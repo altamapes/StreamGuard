@@ -605,6 +605,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                 <tr className="text-gray-400 border-b border-white/10 text-sm uppercase tracking-wider">
                                     <th className="pb-3 pl-2 pt-2">App User</th>
                                     <th className="pb-3 pt-2">Last.fm</th>
+                                    <th className="pb-3 text-center pt-2">Tabungan</th>
                                     <th className="pb-3 text-center pt-2">Pending</th>
                                     <th className="pb-3 text-center pt-2">Status</th>
                                     <th className="pb-3 text-right pr-2 pt-2">Action</th>
@@ -613,7 +614,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                             <tbody className="divide-y divide-white/5">
                                 {filteredUsers.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className="text-center py-8 text-gray-500 italic">
+                                        <td colSpan={6} className="text-center py-8 text-gray-500 italic">
                                             {searchQuery ? 'No users match your search.' : 'No users found.'}
                                         </td>
                                     </tr>
@@ -627,6 +628,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                                     {user.appUsername}
                                                 </td>
                                                 <td className="py-4 align-middle text-gray-400 text-sm font-mono">{user.lastFmUsername}</td>
+                                                <td className="py-4 align-middle text-center text-yellow-500 font-bold">
+                                                    {user.extraPointsBalance || 0}
+                                                </td>
                                                 <td className="py-4 align-middle text-center">
                                                     {debt > 0 ? (
                                                         <span className="px-2 py-1 bg-red-900/40 text-red-500 rounded-lg text-xs font-black border border-red-500/20">
@@ -878,6 +882,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                                 <XCircle size={16} /> Missing
                                             </span>
                                         )}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] text-gray-500 block">Tabungan Poin</label>
+                                    <div className="text-sm font-medium text-yellow-500 font-bold">
+                                        {viewingUser.extraPointsBalance || 0} Poin
                                     </div>
                                 </div>
                                 <div>
