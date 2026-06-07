@@ -30,6 +30,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   // Edit Form State
   const [editLastFmUser, setEditLastFmUser] = useState('');
   const [editLastFmKey, setEditLastFmKey] = useState('');
+  const [editLastFmAccounts, setEditLastFmAccounts] = useState<{username: string, apiKey: string}[]>([]);
   const [editPassword, setEditPassword] = useState('');
   
   // Personal Music State
@@ -95,13 +96,30 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         to = Math.floor(endOfDay.getTime() / 1000);
       }
 
-      // Use credentials from the logged-in user with date filtering
-      const recentTracks = await fetchRecentTracks(
-        currentUser.lastFmUsername, 
-        currentUser.lastFmApiKey,
-        from,
-        to
-      );
+      // Use credentials from all linked Last.fm accounts
+      const accountsToSync = currentUser.lastFmAccounts?.length 
+        ? currentUser.lastFmAccounts 
+        : [{ username: currentUser.lastFmUsername, apiKey: currentUser.lastFmApiKey }];
+
+      let allRecentTracks: any[] = [];
+
+      try {
+        const fetchPromises = accountsToSync.map(account => {
+          if (!account.username) return Promise.resolve([]);
+          return fetchRecentTracks(
+            account.username,
+            account.apiKey || currentUser.lastFmApiKey, // Fallback to main API key if missing
+            from,
+            to
+          );
+        });
+        const results = await Promise.all(fetchPromises);
+        allRecentTracks = results.flat();
+      } catch (e: any) {
+        throw new Error('Gagal sinkronisasi salah satu akun Last.fm. Pastikan username dan API Key benar.');
+      }
+      
+      const recentTracks = allRecentTracks;
       
       let minPlayCount = Infinity;
       const newMatches: Record<string, string> = {};
@@ -238,6 +256,10 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const openProfile = () => {
     setEditLastFmUser(currentUser.lastFmUsername);
     setEditLastFmKey(currentUser.lastFmApiKey);
+    const defaultAccounts = currentUser.lastFmAccounts?.length 
+      ? currentUser.lastFmAccounts 
+      : [{ username: currentUser.lastFmUsername, apiKey: currentUser.lastFmApiKey }];
+    setEditLastFmAccounts(defaultAccounts);
     setEditPassword(currentUser.password);
     setEditPlaylistUrl(currentUser.personalPlaylistUrl || '');
     setEditPersonalArtist(currentUser.personalArtist || '');
@@ -255,6 +277,10 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     e.stopPropagation();
     setEditLastFmUser(currentUser.lastFmUsername);
     setEditLastFmKey(currentUser.lastFmApiKey);
+    const defaultAccounts = currentUser.lastFmAccounts?.length 
+      ? currentUser.lastFmAccounts 
+      : [{ username: currentUser.lastFmUsername, apiKey: currentUser.lastFmApiKey }];
+    setEditLastFmAccounts(defaultAccounts);
     setEditPassword(currentUser.password);
     setEditPlaylistUrl(currentUser.personalPlaylistUrl || '');
     setEditPersonalArtist(currentUser.personalArtist || '');
@@ -271,9 +297,11 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const handleSaveProfile = async () => {
     setIsSavingProfile(true);
     try {
+      const primaryAccount = editLastFmAccounts[0] || { username: '', apiKey: '' };
       const updates = {
-        lastFmUsername: editLastFmUser,
-        lastFmApiKey: editLastFmKey,
+        lastFmAccounts: editLastFmAccounts,
+        lastFmUsername: primaryAccount.username,
+        lastFmApiKey: primaryAccount.apiKey,
         password: editPassword,
         personalPlaylistUrl: editPlaylistUrl,
         personalArtist: editPersonalArtist,
@@ -731,31 +759,67 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                      </div>
                      
                      <div className="border-t border-white/10 my-4"></div>
+                     <div className="flex justify-between items-center mb-1">
+                       <label className="text-xs font-bold text-gray-500 uppercase block">Last.fm Accounts (Max 5)</label>
+                       {editLastFmAccounts.length < 5 && (
+                         <button 
+                           onClick={() => setEditLastFmAccounts([...editLastFmAccounts, { username: '', apiKey: '' }])}
+                           className="text-xs text-green-400 hover:text-green-300 font-bold"
+                         >
+                           + Add Account
+                         </button>
+                       )}
+                     </div>
 
-                     <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Last.fm Username</label>
-                        <div className="relative">
-                          <UserIcon className="absolute left-3 top-3 text-gray-500" size={16} />
-                          <input 
-                            type="text"
-                            value={editLastFmUser}
-                            onChange={(e) => setEditLastFmUser(e.target.value)}
-                            className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white focus:border-neon-purple focus:outline-none"
-                          />
-                        </div>
-                     </div>
-                     <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Last.fm API Key</label>
-                        <div className="relative">
-                          <Key className="absolute left-3 top-3 text-gray-500" size={16} />
-                          <input 
-                            type="text"
-                            value={editLastFmKey}
-                            onChange={(e) => setEditLastFmKey(e.target.value)}
-                            className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white focus:border-neon-purple focus:outline-none font-mono text-xs"
-                          />
-                        </div>
-                     </div>
+                     {editLastFmAccounts.map((account, index) => (
+                       <div key={index} className="pl-3 border-l-2 border-white/5 space-y-3 mb-4 pt-1">
+                         <div className="flex justify-between items-center">
+                           <span className="text-[10px] text-gray-500 font-bold uppercase track-wider">Account {index + 1}</span>
+                           {editLastFmAccounts.length > 1 && (
+                             <button 
+                               onClick={() => setEditLastFmAccounts(editLastFmAccounts.filter((_, i) => i !== index))}
+                               className="text-red-400 hover:text-red-300 transform scale-75"
+                               title="Remove Account"
+                             >
+                               <X size={16} />
+                             </button>
+                           )}
+                         </div>
+                         <div>
+                            <div className="relative">
+                              <UserIcon className="absolute left-3 top-3 text-gray-500" size={16} />
+                              <input 
+                                type="text"
+                                placeholder="Last.fm Username"
+                                value={account.username}
+                                onChange={(e) => {
+                                  const newAccounts = [...editLastFmAccounts];
+                                  newAccounts[index].username = e.target.value;
+                                  setEditLastFmAccounts(newAccounts);
+                                }}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white focus:border-neon-purple focus:outline-none"
+                              />
+                            </div>
+                         </div>
+                         <div>
+                            <div className="relative">
+                              <Key className="absolute left-3 top-3 text-gray-500" size={16} />
+                              <input 
+                                type="text"
+                                placeholder="Last.fm API Key"
+                                value={account.apiKey}
+                                onChange={(e) => {
+                                  const newAccounts = [...editLastFmAccounts];
+                                  newAccounts[index].apiKey = e.target.value;
+                                  setEditLastFmAccounts(newAccounts);
+                                }}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white focus:border-neon-purple focus:outline-none font-mono text-xs"
+                              />
+                            </div>
+                         </div>
+                       </div>
+                     ))}
+
                      <div>
                         <label className="text-xs font-bold text-gray-500 uppercase block mb-1">App Password</label>
                         <div className="relative">

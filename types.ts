@@ -38,6 +38,7 @@ export interface User {
   password: string;    // Password for login (simple storage)
   lastFmUsername: string;
   lastFmApiKey: string;
+  lastFmAccounts?: { username: string; apiKey: string; }[]; // Multi-account support (Max 5)
   lastCheckInDate: string | null; // Stores the date string (e.g. "20/02/2024")
   checkInHistory?: string[]; // Array of date strings for completed days
   personalPlaylistUrl?: string; // Optional: User's personal Spotify link
