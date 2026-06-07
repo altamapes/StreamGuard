@@ -287,9 +287,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
   // Helper to check if user checked in today
   const isCheckedInToday = (user: User) => {
-    const today = new Date().toLocaleDateString();
-    if (user.checkInHistory && user.checkInHistory.includes(today)) return true;
-    return user.lastCheckInDate === today;
+    const d = new Date();
+    const todayStr = d.toLocaleDateString();
+    const todayEnUS = d.toLocaleDateString('en-US');
+    const todayEnGB = d.toLocaleDateString('en-GB'); // DD/MM/YYYY
+    const todayIdID = d.toLocaleDateString('id-ID');
+    
+    const possibleDates = [todayStr, todayEnUS, todayEnGB, todayIdID];
+    
+    if (user.checkInHistory) {
+      if (possibleDates.some(date => user.checkInHistory!.includes(date))) return true;
+    }
+    return possibleDates.includes(user.lastCheckInDate || '');
   };
 
   const calculateDebt = (user: User) => {
@@ -301,12 +310,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     for (let i = 1; i <= 7; i++) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      const dateStr = date.toLocaleDateString();
+      const possibleDates = [
+        date.toLocaleDateString(),
+        date.toLocaleDateString('en-US'),
+        date.toLocaleDateString('en-GB'),
+        date.toLocaleDateString('id-ID')
+      ];
       const dayIndex = date.getDay();
       
       const dayConfig = schedule[dayIndex];
       const hasTracks = dayConfig && dayConfig.tracks && dayConfig.tracks.length > 0;
-      const isCheckedIn = user.checkInHistory?.includes(dateStr);
+      let isCheckedIn = false;
+      if (user.checkInHistory) {
+         isCheckedIn = possibleDates.some(pd => user.checkInHistory!.includes(pd));
+      }
       
       if (hasTracks && !isCheckedIn) {
         debtCount++;

@@ -8,7 +8,7 @@ import { DEFAULT_SPOTIFY_ID } from '../constants';
 interface MemberViewProps {
   weeklySchedule: WeeklySchedule;
   currentUser: User;
-  onCheckIn: (dateStr: string) => void;
+  onCheckIn: (dateStr: string) => Promise<void> | void;
   onUpdateUser: (user: User) => void;
   onLogout: () => void;
 }
@@ -191,7 +191,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const handleClaim = async () => {
     // Regular check-in
     if (!hasCheckedInSelectedDate) {
-      onCheckIn(selectedDateStr); 
+      await onCheckIn(selectedDateStr); 
     }
     
     // Extra points
