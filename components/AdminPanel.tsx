@@ -1091,11 +1091,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                                     <div className="text-sm font-bold text-white break-words leading-tight mb-0.5">{track.name}</div>
                                                     <div className="text-xs text-gray-400 truncate">{track.artist?.['#text']}</div>
                                                 </div>
-                                                {track.date && track.date['#text'] && (
+                                                {track['@attr']?.nowplaying === 'true' ? (
+                                                    <div className="text-[10px] text-green-400 font-bold shrink-0 text-right animate-pulse flex justify-end items-center gap-1">
+                                                        Now Playing
+                                                    </div>
+                                                ) : track.date?.uts ? (
+                                                    <div className="text-[10px] text-gray-500 shrink-0 text-right">
+                                                        {new Date(parseInt(track.date.uts) * 1000).toLocaleString('id-ID', {
+                                                            day: '2-digit',
+                                                            month: 'short',
+                                                            year: 'numeric',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        })}
+                                                    </div>
+                                                ) : track.date?.['#text'] ? (
                                                     <div className="text-[10px] text-gray-500 shrink-0 text-right">
                                                         {track.date['#text']}
                                                     </div>
-                                                )}
+                                                ) : null}
                                             </div>
                                         ))
                                     )}
