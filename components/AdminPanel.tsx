@@ -104,7 +104,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     // Using current time or end of the target date conceptually
     // To simplify for this view, we'll fetch the last 50 tracks
     try {
-      const tracks = await fetchRecentTracks(user.lastFmUsername, user.lastFmApiKey, undefined, undefined, 50);
+      const tracks = await fetchRecentTracks(user.lastFmUsername, user.lastFmApiKey, undefined, undefined);
       setUserHistory(tracks);
     } catch (e: any) {
       setHistoryError(e.message || 'Failed to fetch history.');

@@ -1,25 +1,17 @@
 import { User, TargetTrack, CloudConfig, AppData, WeeklySchedule, DayConfig } from '../types';
 import { STORAGE_KEY, STORAGE_KEY_USERS, STORAGE_KEY_CLOUD, STORAGE_KEY_SPOTIFY, DEFAULT_TRACKS, DEFAULT_CLOUD_CONFIG, DEFAULT_SPOTIFY_ID, ADMIN_PIN } from '../constants';
+import { db } from './firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-// --- CLOUD STORAGE SERVICE (JSONBin.io Adapter) ---
+// --- CLOUD STORAGE SERVICE (Firebase Firestore Adapter) ---
 
 export const storageService = {
   
   // --- CONFIGURATION ---
   
   getCloudConfig(): CloudConfig | null {
-    // 1. Cek LocalStorage (Settingan Manual User)
-    const stored = localStorage.getItem(STORAGE_KEY_CLOUD);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-
-    // 2. Jika LocalStorage kosong, gunakan Default Config dari constants.ts
-    if (DEFAULT_CLOUD_CONFIG.binId && DEFAULT_CLOUD_CONFIG.apiKey) {
-      return DEFAULT_CLOUD_CONFIG;
-    }
-
-    return null;
+    // Keep this for backwards compatibility, but it's no longer used for fetching
+    return DEFAULT_CLOUD_CONFIG;
   },
 
   saveCloudConfig(config: CloudConfig) {
@@ -30,66 +22,22 @@ export const storageService = {
     localStorage.removeItem(STORAGE_KEY_CLOUD);
   },
 
-  // Verify connection validity before saving
+  // Verify connection validity before saving (now just returns true for Firebase)
   async verifyConnection(binId: string, apiKey: string): Promise<{valid: boolean; message?: string}> {
-    try {
-        const cleanBinId = binId.trim();
-        const cleanApiKey = apiKey.trim();
-
-        if (!cleanBinId || !cleanApiKey) return { valid: false, message: 'Bin ID and API Key are required' };
-
-        const response = await fetch(`https://api.jsonbin.io/v3/b/${cleanBinId}/latest`, {
-          method: 'GET',
-          headers: {
-            'X-Master-Key': cleanApiKey,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (response.ok) return { valid: true };
-        
-        try {
-            const errResult = await response.json();
-            if (errResult.message) {
-                return { valid: false, message: errResult.message };
-            }
-        } catch(e) {}
-
-        if (response.status === 401 || response.status === 403) return { valid: false, message: 'Invalid API Key or Access Denied' };
-        if (response.status === 404) return { valid: false, message: 'Bin ID not found' };
-        
-        return { valid: false, message: `Connection failed: ${response.statusText}` };
-    } catch (e: any) {
-        return { valid: false, message: 'Network error or invalid configuration' };
-    }
+      return { valid: true };
   },
 
   // --- INTERNAL HELPERS ---
 
   async _fetchFullData(): Promise<AppData> {
-    const config = this.getCloudConfig();
     
-    // 1. CLOUD MODE
-    if (config && config.enabled && config.binId && config.apiKey) {
-      const cleanBinId = config.binId.trim();
-      const cleanApiKey = config.apiKey.trim();
+    // 1. CLOUD MODE (FIREBASE)
+    try {
+      const docRef = doc(db, 'appData', 'main');
+      const docSnap = await getDoc(docRef);
 
-      try {
-        const response = await fetch(`https://api.jsonbin.io/v3/b/${cleanBinId}/latest`, {
-          method: 'GET',
-          headers: {
-            'X-Master-Key': cleanApiKey,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-             throw new Error(`Cloud Sync Failed: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        const record = result.record || {};
-        
+      if (docSnap.exists()) {
+        const record = docSnap.data();
         return {
             users: Array.isArray(record.users) ? record.users : [],
             tracks: Array.isArray(record.tracks) ? record.tracks : (record.tracks || DEFAULT_TRACKS),
@@ -97,14 +45,14 @@ export const storageService = {
             weeklySchedule: record.weeklySchedule || {},
             adminPin: record.adminPin || ADMIN_PIN
         };
-
-      } catch (e: any) {
-        console.warn("Cloud Fetch Warning, falling back to local:", e.message);
-        // DO NOT RETURN OR THROW YET, LET IT FALL THROUGH TO LOCAL MODE
+      } else {
+         console.warn("No data in Firebase yet, will try to fall back to local");
       }
-    } 
+    } catch (e: any) {
+      console.error("Firebase Fetch Error, falling back to local:", e);
+    }
     
-    // 2. LOCAL MODE
+    // 2. LOCAL MODE (FALLBACK)
     const usersStr = localStorage.getItem(STORAGE_KEY_USERS);
     const tracksStr = localStorage.getItem(STORAGE_KEY);
     const spotifyIdStr = localStorage.getItem(STORAGE_KEY_SPOTIFY);
@@ -121,43 +69,37 @@ export const storageService = {
         if (scheduleStr) weeklySchedule = JSON.parse(scheduleStr) || {};
     } catch (e) { console.error("Error parsing local data", e); }
     
-    return {
+    const localData = {
       users,
       tracks,
       spotifyPlaylistId: spotifyIdStr || DEFAULT_SPOTIFY_ID,
       weeklySchedule,
       adminPin: pinStr || ADMIN_PIN
     };
+
+    // Auto-seed Firebase so we don't lose the local fallback data on next fetches from other devices
+    try {
+      if (typeof db !== "undefined" && users.length > 0) {
+        setDoc(doc(db, 'appData', 'main'), localData).catch(() => {});
+      }
+    } catch(e) {}
+
+    return localData;
   },
 
   async _saveFullData(data: AppData): Promise<void> {
-    const config = this.getCloudConfig();
 
-    // 1. CLOUD MODE
-    if (config && config.enabled && config.binId && config.apiKey) {
-       const cleanBinId = config.binId.trim();
-       const cleanApiKey = config.apiKey.trim();
-       
-       try {
-        const response = await fetch(`https://api.jsonbin.io/v3/b/${cleanBinId}`, {
-          method: 'PUT',
-          headers: {
-            'X-Master-Key': cleanApiKey,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(data)
-        });
-
-        if (!response.ok) throw new Error(`Cloud Save Failed (${response.status})`);
+    // 1. CLOUD MODE (FIREBASE)
+    try {
+        const docRef = doc(db, 'appData', 'main');
+        await setDoc(docRef, data);
         
         // Update local cache
         this._updateLocalCache(data);
         return; // End early if save succeeded
-      } catch (e: any) {
-        console.warn("Cloud Save Warning, saving locally only:", e.message);
-        // Fall through to local save
-      }
-    } 
+    } catch (e: any) {
+        console.error("Firebase Save Error, saving locally only:", e);
+    }
     
     // 2. LOCAL MODE
     this._updateLocalCache(data);
@@ -177,6 +119,7 @@ export const storageService = {
     const data = await this._fetchFullData();
     return Array.isArray(data.users) ? data.users : [];
   },
+
 
   async registerUser(newUser: User): Promise<User> {
     const data = await this._fetchFullData();
