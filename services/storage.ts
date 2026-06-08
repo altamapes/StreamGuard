@@ -48,6 +48,13 @@ export const storageService = {
 
         if (response.ok) return { valid: true };
         
+        try {
+            const errResult = await response.json();
+            if (errResult.message) {
+                return { valid: false, message: errResult.message };
+            }
+        } catch(e) {}
+
         if (response.status === 401 || response.status === 403) return { valid: false, message: 'Invalid API Key or Access Denied' };
         if (response.status === 404) return { valid: false, message: 'Bin ID not found' };
         
