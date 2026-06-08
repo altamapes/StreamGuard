@@ -288,11 +288,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const json = JSON.parse(event.target?.result as string);
         if (window.confirm('WARNING: This will overwrite ALL data (including Admin PIN). Continue?')) {
-            storageService.importData(
+            await storageService.importData(
               json.users ? JSON.stringify(json.users) : null,
               null, // Legacy tracks ignored
               json.schedule ? JSON.stringify(json.schedule) : null,

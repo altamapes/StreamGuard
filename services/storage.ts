@@ -319,10 +319,15 @@ export const storageService = {
     };
   },
 
-  importData(usersJson: string | null, tracksJson: string | null, scheduleJson: string | null, pinJson: string | null) {
-    if (usersJson) localStorage.setItem(STORAGE_KEY_USERS, usersJson);
-    if (tracksJson) localStorage.setItem(STORAGE_KEY, tracksJson);
-    if (scheduleJson) localStorage.setItem('streamguard_schedule', scheduleJson);
-    if (pinJson) localStorage.setItem('streamguard_admin_pin', pinJson);
+  async importData(usersJson: string | null, tracksJson: string | null, scheduleJson: string | null, pinJson: string | null) {
+    const data: AppData = {
+      users: usersJson ? JSON.parse(usersJson) : [],
+      tracks: tracksJson ? JSON.parse(tracksJson) : DEFAULT_TRACKS,
+      spotifyPlaylistId: DEFAULT_SPOTIFY_ID,
+      weeklySchedule: scheduleJson ? JSON.parse(scheduleJson) : {},
+      adminPin: pinJson || ADMIN_PIN
+    };
+
+    await this._saveFullData(data);
   }
 };
