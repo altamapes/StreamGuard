@@ -120,6 +120,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     }
   };
 
+  const handleResetPassword = async (userId: string, username: string) => {
+    const newPassword = window.prompt(`Enter new password for user "${username}":`);
+    if (newPassword !== null && newPassword.trim().length > 0) {
+      try {
+        await storageService.updateUserProfile(userId, { password: newPassword.trim() });
+        setUsersList(usersList.map(u => u.id === userId ? { ...u, password: newPassword.trim() } : u));
+        if (viewingUser && viewingUser.id === userId) {
+          setViewingUser({ ...viewingUser, password: newPassword.trim() });
+        }
+        alert(`Password for ${username} has been updated successfully.`);
+      } catch (e) {
+        console.error("Failed to update password", e);
+        alert("Failed to update password.");
+      }
+    }
+  };
+
   // --- PLAYLIST LOGIC (WEEKLY) ---
 
   const handleDayChange = (dayIndex: number) => {
@@ -679,6 +696,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                                             <Eye size={16} />
                                                         </button>
                                                         <button 
+                                                            onClick={() => handleResetPassword(user.id, user.appUsername)}
+                                                            className="p-2 bg-white/5 hover:bg-yellow-600/20 hover:text-yellow-400 rounded-lg transition-colors border border-white/5"
+                                                            title="Change User Password"
+                                                        >
+                                                            <Key size={16} />
+                                                        </button>
+                                                        <button 
                                                             onClick={() => handleDeleteUser(user.id, user.appUsername)}
                                                             className="p-2 bg-white/5 hover:bg-red-600/20 hover:text-red-400 rounded-lg transition-colors border border-white/5"
                                                             title="Delete User"
@@ -1028,8 +1052,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
                     </div>
                     
-                    {/* Delete User Button */}
-                    <div className="mt-8 pt-6 border-t border-white/10 flex justify-end">
+                    {/* Actions */}
+                    <div className="mt-8 pt-6 border-t border-white/10 flex justify-end gap-3">
+                        <button 
+                            onClick={() => handleResetPassword(viewingUser.id, viewingUser.appUsername)}
+                            className="flex items-center gap-2 px-4 py-2 bg-yellow-900/30 hover:bg-yellow-600 text-yellow-400 hover:text-white rounded-lg transition-colors border border-yellow-500/20"
+                        >
+                            <Key size={16} />
+                            Change Password
+                        </button>
                         <button 
                             onClick={() => handleDeleteUser(viewingUser.id, viewingUser.appUsername)}
                             className="flex items-center gap-2 px-4 py-2 bg-red-900/30 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition-colors border border-red-500/20"
