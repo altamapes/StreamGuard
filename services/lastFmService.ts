@@ -71,8 +71,11 @@ export const fetchRecentTracks = async (
     
     // Fix: Last.fm returns a single object if only 1 track exists, instead of an array.
     // We must normalize this to always be an array.
-    const tracks = data.recenttracks.track;
-    return Array.isArray(tracks) ? tracks : [tracks];
+    let tracks = data.recenttracks.track;
+    tracks = Array.isArray(tracks) ? tracks : [tracks];
+    
+    // Inject the username that listened to these tracks
+    return tracks.map((t: any) => ({ ...t, listenedBy: username }));
 
   } catch (error: any) {
     console.error('API Error:', error);

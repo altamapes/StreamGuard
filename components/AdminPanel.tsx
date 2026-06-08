@@ -94,10 +94,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
 
     const targetDateStr = user.lastCheckInDate || new Date().toLocaleDateString('en-GB');
     // Using current time or end of the target date conceptually
-    // To simplify for this view, we'll fetch the last 50 tracks
+    // To simplify for this view, we'll fetch the last 50 tracks collectively
     try {
-      const tracks = await fetchRecentTracks(user.lastFmUsername, user.lastFmApiKey, undefined, undefined);
-      setUserHistory(tracks);
+      const accountsToSync = user.lastFmAccounts?.length 
+        ? user.lastFmAccounts 
+        : [{ username: user.lastFmUsername, apiKey: user.lastFmApiKey }];
+
+      let allRecentTracks: any[] = [];
+      const fetchPromises = accountsToSync.map(account => {
+        if (!account.username) return Promise.resolve([]);
+        return fetchRecentTracks(
+          account.username,
+          account.apiKey || user.lastFmApiKey,
+          undefined,
+          undefined
+        );
+      });
+      const results = await Promise.all(fetchPromises);
+      allRecentTracks = results.flat();
+      setUserHistory(allRecentTracks.slice(0, 50));
     } catch (e: any) {
       setHistoryError(e.message || 'Failed to fetch history.');
     } finally {
@@ -1022,7 +1037,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="text-sm font-bold text-white break-words leading-tight mb-0.5">{track.name}</div>
-                                                    <div className="text-xs text-gray-400 truncate">{track.artist?.['#text']}</div>
+                                                    <div className="text-xs text-gray-400 truncate">
+                                                        {track.artist?.['#text']}
+                                                        {track.listenedBy && <span className="ml-2 px-1.5 py-0.5 bg-blue-900/30 text-blue-300 rounded text-[10px] font-mono">@{track.listenedBy}</span>}
+                                                    </div>
                                                 </div>
                                                 {track['@attr']?.nowplaying === 'true' ? (
                                                     <div className="text-[10px] text-green-400 font-bold shrink-0 text-right animate-pulse flex justify-end items-center gap-1">

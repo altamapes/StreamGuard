@@ -19,6 +19,7 @@ export interface LastFmTrack {
   '@attr'?: {
     nowplaying: string;
   };
+  listenedBy?: string;
 }
 
 export enum ViewMode {
