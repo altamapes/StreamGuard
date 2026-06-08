@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, WeeklySchedule } from '../types';
-import { Calendar, Search } from 'lucide-react';
+import { Calendar, Search, CalendarDays } from 'lucide-react';
 
 interface AdminReportViewProps {
   users: User[];
@@ -11,27 +11,68 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
   const [reportType, setReportType] = useState<'weekly' | 'monthly'>('weekly');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Weekly: Last 7 days
-  // Monthly: Last 30 days
-  const daysToLookBack = reportType === 'weekly' ? 7 : 30;
+  // Weekly selection
+  const [selectedWeekEnd, setSelectedWeekEnd] = useState<string>(new Date().toISOString().split('T')[0]);
+  
+  // Monthly selection
+  const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthStr);
 
-  const datesToCheck: { dateStr: string; dayIndex: number; hasTracks: boolean; isPast: boolean }[] = [];
+  const datesToCheck: { dateStr: string; dayIndex: number; hasTracks: boolean; isPast: boolean; possibleDates: string[] }[] = [];
   const today = new Date();
   today.setHours(0,0,0,0);
 
-  for (let i = 0; i < daysToLookBack; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    d.setHours(0,0,0,0);
-    const dateStr = d.toLocaleDateString();
-    const dayIndex = d.getDay();
-    const dayConfig = schedule[dayIndex];
-    const hasTracks = dayConfig && dayConfig.tracks && dayConfig.tracks.length > 0;
+  if (reportType === 'weekly') {
+    const endDate = new Date(selectedWeekEnd);
+    endDate.setHours(0,0,0,0);
     
-    // Check if it's past or today
-    const isPast = d.getTime() < today.getTime();
+    // Look back 7 days ending at endDate
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(endDate);
+        d.setDate(d.getDate() - i);
+        
+        const dateStr = d.toLocaleDateString();
+        const possibleDates = [
+            d.toLocaleDateString(),
+            d.toLocaleDateString('en-US'),
+            d.toLocaleDateString('en-GB'),
+            d.toLocaleDateString('id-ID')
+        ];
 
-    datesToCheck.push({ dateStr, dayIndex, hasTracks: !!hasTracks, isPast });
+        const dayIndex = d.getDay();
+        const dayConfig = schedule[dayIndex];
+        const hasTracks = dayConfig && dayConfig.tracks && dayConfig.tracks.length > 0;
+        const isPast = d.getTime() < today.getTime();
+
+        datesToCheck.push({ dateStr, dayIndex, hasTracks: !!hasTracks, isPast, possibleDates });
+    }
+  } else {
+    // Monthly report
+    const [yearStr, monthStr] = selectedMonth.split('-');
+    const year = parseInt(yearStr);
+    const month = parseInt(monthStr) - 1; // 0-indexed
+
+    // Number of days in the selected month
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    for (let i = 1; i <= daysInMonth; i++) {
+        const d = new Date(year, month, i);
+        
+        const dateStr = d.toLocaleDateString();
+        const possibleDates = [
+            d.toLocaleDateString(),
+            d.toLocaleDateString('en-US'),
+            d.toLocaleDateString('en-GB'),
+            d.toLocaleDateString('id-ID')
+        ];
+
+        const dayIndex = d.getDay();
+        const dayConfig = schedule[dayIndex];
+        const hasTracks = dayConfig && dayConfig.tracks && dayConfig.tracks.length > 0;
+        const isPast = d.getTime() < today.getTime();
+
+        datesToCheck.push({ dateStr, dayIndex, hasTracks: !!hasTracks, isPast, possibleDates });
+    }
   }
 
   // How many target days are there in this period?
@@ -43,14 +84,24 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
     let debtCount = 0; // days that are past, had tracks, and user didn't check in
     
     datesToCheck.forEach(d => {
-      const isCheckedIn = user.checkInHistory?.includes(d.dateStr) || user.lastCheckInDate === d.dateStr;
+      let isCheckedIn = false;
+      
+      // Check lastCheckInDate against all possible formats
+      if (user.lastCheckInDate && d.possibleDates.includes(user.lastCheckInDate)) {
+          isCheckedIn = true;
+      }
+      
+      // Check checkInHistory
+      if (!isCheckedIn && user.checkInHistory) {
+          isCheckedIn = d.possibleDates.some(pd => user.checkInHistory!.includes(pd));
+      }
       
       if (d.hasTracks) {
         if (isCheckedIn) {
           completedCount++;
         } else if (d.isPast) { // Only count as debt if it's in the past
            debtCount++;
-        } else if (d.dateStr === today.toLocaleDateString()) {
+        } else if (d.possibleDates.includes(today.toLocaleDateString())) {
            // If it's today, it's missing if not checked in
            debtCount++;
         }
@@ -80,30 +131,64 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
                 onClick={() => setReportType('monthly')}
                 className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-all ${reportType === 'monthly' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
              >
-                Bulanan (30 Hari)
+                Bulanan
              </button>
           </div>
           
-          <div className="relative w-full md:w-64">
-             <Search className="absolute left-3 top-2.5 text-gray-500" size={16} />
-             <input 
-                type="text" 
-                placeholder="Cari user..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-4 py-2 focus:outline-none focus:border-purple-500 text-white placeholder-gray-600 text-sm"
-             />
+          <div className="flex gap-4 w-full md:w-auto items-center">
+             {reportType === 'weekly' ? (
+                <div className="flex items-center gap-2 text-sm text-gray-300">
+                   <CalendarDays size={18} className="text-purple-400" />
+                   <span className="hidden sm:inline">Pilih Tanggal:</span>
+                   <input 
+                      type="date"
+                      value={selectedWeekEnd}
+                      onChange={(e) => setSelectedWeekEnd(e.target.value)}
+                      className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 focus:outline-none focus:border-purple-500 text-white"
+                   />
+                </div>
+             ) : (
+                <div className="flex items-center gap-2 text-sm text-gray-300">
+                   <CalendarDays size={18} className="text-purple-400" />
+                   <span className="hidden sm:inline">Pilih Bulan:</span>
+                   <input 
+                      type="month"
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 focus:outline-none focus:border-purple-500 text-white"
+                   />
+                </div>
+             )}
+             
+             <div className="relative w-full md:w-48 ml-auto md:ml-0">
+                <Search className="absolute left-3 top-2.5 text-gray-500" size={16} />
+                <input 
+                   type="text" 
+                   placeholder="Cari user..." 
+                   value={searchQuery}
+                   onChange={(e) => setSearchQuery(e.target.value)}
+                   className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-4 py-2 focus:outline-none focus:border-purple-500 text-white placeholder-gray-600 text-sm"
+                />
+             </div>
           </div>
        </div>
 
        {/* Report Table */}
        <div className="glass p-6 rounded-2xl shadow-lg shadow-purple-900/20 overflow-hidden">
-          <div className="mb-4">
-             <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                 <Calendar size={20} className="text-purple-400" /> 
-                 Rekap Report {reportType === 'weekly' ? 'Mingguan' : 'Bulanan'}
-             </h3>
-             <p className="text-sm text-gray-400">Menampilkan rekapitulasi performa streaming dan check-in user selama {daysToLookBack} hari terakhir.</p>
+          <div className="mb-4 flex justify-between items-center flex-wrap gap-2">
+             <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Calendar size={20} className="text-purple-400" /> 
+                    Rekap Report {reportType === 'weekly' ? 'Mingguan' : 'Bulanan'}
+                </h3>
+                <p className="text-sm text-gray-400 mt-1">
+                    {reportType === 'weekly' ? (
+                       <>Menampilkan rekapitulasi 7 hari terakhir dari tanggal <span className="text-white font-bold">{new Date(selectedWeekEnd).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</span>.</>
+                    ) : (
+                       <>Menampilkan rekapitulasi selama bulan <span className="text-white font-bold">{new Date(selectedMonth + '-01').toLocaleDateString('id-ID', {month: 'long', year: 'numeric'})}</span>.</>
+                    )}
+                </p>
+             </div>
           </div>
           
           <div className="overflow-x-auto custom-scrollbar">
@@ -167,3 +252,4 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
     </div>
   );
 }
+
