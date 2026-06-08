@@ -77,9 +77,7 @@ export const storageService = {
         });
 
         if (!response.ok) {
-            if (response.status === 401 || response.status === 403) throw new Error('Cloud Auth Failed: Check API Key');
-            if (response.status === 404) throw new Error('Cloud Error: Bin ID not found');
-            throw new Error(`Cloud Sync Failed (${response.status})`);
+             throw new Error(`Cloud Sync Failed: ${response.status}`);
         }
         
         const result = await response.json();
@@ -94,37 +92,35 @@ export const storageService = {
         };
 
       } catch (e: any) {
-        console.error("Cloud Fetch Error:", e);
-        throw new Error(e.message || "Could not connect to Cloud Database.");
+        console.warn("Cloud Fetch Warning, falling back to local:", e.message);
+        // DO NOT RETURN OR THROW YET, LET IT FALL THROUGH TO LOCAL MODE
       }
     } 
     
     // 2. LOCAL MODE
-    else {
-      const usersStr = localStorage.getItem(STORAGE_KEY_USERS);
-      const tracksStr = localStorage.getItem(STORAGE_KEY);
-      const spotifyIdStr = localStorage.getItem(STORAGE_KEY_SPOTIFY);
-      const scheduleStr = localStorage.getItem('streamguard_schedule');
-      const pinStr = localStorage.getItem('streamguard_admin_pin');
-      
-      let users = [];
-      let tracks = DEFAULT_TRACKS;
-      let weeklySchedule = {};
+    const usersStr = localStorage.getItem(STORAGE_KEY_USERS);
+    const tracksStr = localStorage.getItem(STORAGE_KEY);
+    const spotifyIdStr = localStorage.getItem(STORAGE_KEY_SPOTIFY);
+    const scheduleStr = localStorage.getItem('streamguard_schedule');
+    const pinStr = localStorage.getItem('streamguard_admin_pin');
+    
+    let users = [];
+    let tracks = DEFAULT_TRACKS;
+    let weeklySchedule = {};
 
-      try {
-          if (usersStr) users = JSON.parse(usersStr) || [];
-          if (tracksStr) tracks = JSON.parse(tracksStr) || DEFAULT_TRACKS;
-          if (scheduleStr) weeklySchedule = JSON.parse(scheduleStr) || {};
-      } catch (e) { console.error("Error parsing local data", e); }
-      
-      return {
-        users,
-        tracks,
-        spotifyPlaylistId: spotifyIdStr || DEFAULT_SPOTIFY_ID,
-        weeklySchedule,
-        adminPin: pinStr || ADMIN_PIN
-      };
-    }
+    try {
+        if (usersStr) users = JSON.parse(usersStr) || [];
+        if (tracksStr) tracks = JSON.parse(tracksStr) || DEFAULT_TRACKS;
+        if (scheduleStr) weeklySchedule = JSON.parse(scheduleStr) || {};
+    } catch (e) { console.error("Error parsing local data", e); }
+    
+    return {
+      users,
+      tracks,
+      spotifyPlaylistId: spotifyIdStr || DEFAULT_SPOTIFY_ID,
+      weeklySchedule,
+      adminPin: pinStr || ADMIN_PIN
+    };
   },
 
   async _saveFullData(data: AppData): Promise<void> {
@@ -149,17 +145,15 @@ export const storageService = {
         
         // Update local cache
         this._updateLocalCache(data);
-
-      } catch (e) {
-        console.error("Cloud Save Error:", e);
-        throw new Error("Failed to save to Cloud.");
+        return; // End early if save succeeded
+      } catch (e: any) {
+        console.warn("Cloud Save Warning, saving locally only:", e.message);
+        // Fall through to local save
       }
     } 
     
     // 2. LOCAL MODE
-    else {
-      this._updateLocalCache(data);
-    }
+    this._updateLocalCache(data);
   },
 
   _updateLocalCache(data: AppData) {
