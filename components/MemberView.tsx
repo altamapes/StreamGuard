@@ -28,6 +28,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   
   // Edit Form State
+  const [editAppUsername, setEditAppUsername] = useState('');
   const [editLastFmUser, setEditLastFmUser] = useState('');
   const [editLastFmKey, setEditLastFmKey] = useState('');
   const [editLastFmAccounts, setEditLastFmAccounts] = useState<{username: string, apiKey: string}[]>([]);
@@ -254,6 +255,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
 
   // Profile Handlers
   const openProfile = () => {
+    setEditAppUsername(currentUser.appUsername);
     setEditLastFmUser(currentUser.lastFmUsername);
     setEditLastFmKey(currentUser.lastFmApiKey);
     const defaultAccounts = currentUser.lastFmAccounts?.length 
@@ -275,6 +277,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
 
   const openSettings = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setEditAppUsername(currentUser.appUsername);
     setEditLastFmUser(currentUser.lastFmUsername);
     setEditLastFmKey(currentUser.lastFmApiKey);
     const defaultAccounts = currentUser.lastFmAccounts?.length 
@@ -295,10 +298,15 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   };
 
   const handleSaveProfile = async () => {
+    if (!editAppUsername.trim()) {
+      alert("Username aplikasi tidak boleh kosong!");
+      return;
+    }
     setIsSavingProfile(true);
     try {
       const primaryAccount = editLastFmAccounts[0] || { username: '', apiKey: '' };
       const updates = {
+        appUsername: editAppUsername,
         lastFmAccounts: editLastFmAccounts,
         lastFmUsername: primaryAccount.username,
         lastFmApiKey: primaryAccount.apiKey,
@@ -654,6 +662,19 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                 {isEditingProfile ? (
                   /* EDIT MODE */
                   <div className="mt-8 space-y-4 animate-fade-in">
+                     <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase block mb-1">App Username</label>
+                        <div className="relative">
+                            <UserIcon className="absolute left-3 top-2.5 text-gray-500" size={16} />
+                            <input 
+                                type="text"
+                                value={editAppUsername}
+                                onChange={(e) => setEditAppUsername(e.target.value)}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white focus:border-blue-500 focus:outline-none placeholder-gray-600 text-sm font-bold"
+                                placeholder="Username Applikasi"
+                            />
+                        </div>
+                     </div>
                      <div className="flex gap-2">
                         <div className="flex-1">
                             <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Nama WA</label>
