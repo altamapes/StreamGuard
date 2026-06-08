@@ -38,24 +38,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const [historyError, setHistoryError] = useState<string | null>(null);
 
   // Settings State
-  const [cloudConfig, setCloudConfig] = useState<CloudConfig>({ enabled: false, binId: '', apiKey: '' });
   const [settingsMsg, setSettingsMsg] = useState<string | null>(null);
-  const [isVerifying, setIsVerifying] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Admin PIN State
   const [newAdminPin, setNewAdminPin] = useState('');
   const [isSavingPin, setIsSavingPin] = useState(false);
 
-  const hasDefaults = !!(DEFAULT_CLOUD_CONFIG.binId && DEFAULT_CLOUD_CONFIG.apiKey);
-
   // --- INITIALIZATION ---
   useEffect(() => {
     const init = async () => {
-        // Load Cloud Config
-        const config = storageService.getCloudConfig();
-        if (config) setCloudConfig(config);
-
         // Load Schedule
         setIsLoadingSchedule(true);
         try {
@@ -210,38 +202,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   };
 
   // --- SETTINGS LOGIC ---
-  const handleSaveCloudConfig = async () => {
-    setSettingsMsg(null);
-    if (!cloudConfig.binId || !cloudConfig.apiKey) {
-        setSettingsMsg('Please enter both Bin ID and API Key.');
-        return;
-    }
-
-    setIsVerifying(true);
-    const verification = await storageService.verifyConnection(cloudConfig.binId, cloudConfig.apiKey);
-    setIsVerifying(false);
-
-    if (verification.valid) {
-      const newConfig = { ...cloudConfig, enabled: true };
-      storageService.saveCloudConfig(newConfig);
-      setCloudConfig(newConfig);
-      setSettingsMsg('SUCCESS: Cloud Connected! Please reload the app.');
-    } else {
-      setSettingsMsg(`ERROR: ${verification.message}`);
-    }
-  };
-
-  const handleDisconnectOrReset = () => {
-    storageService.disconnectCloud();
-    if (hasDefaults) {
-        setCloudConfig(DEFAULT_CLOUD_CONFIG);
-        setSettingsMsg('Reset to Default Configuration.');
-    } else {
-        setCloudConfig({ enabled: false, binId: '', apiKey: '' });
-        setSettingsMsg('Cloud Disconnected. Using Local Storage.');
-    }
-  };
-
   const handleChangeAdminPin = async () => {
       if (!newAdminPin || newAdminPin.length < 4) {
           setSettingsMsg('ERROR: PIN must be at least 4 characters.');
@@ -777,66 +737,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                 </div>
             </div>
 
-            {/* Cloud Config Section */}
+            {/* Firebase Database connection info */}
             <div className="glass p-6 rounded-2xl border border-blue-500/20">
                 <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-blue-400">
                     <Cloud /> Database Connection
                 </h3>
                 
-                {/* Default Config Banner */}
-                {hasDefaults && (
-                    <div className="mb-6 p-4 bg-blue-900/20 border border-blue-400/30 rounded-xl flex items-center justify-between gap-3">
-                        <div className="text-sm text-blue-200">
-                            <strong>System Default Active:</strong> Using hardcoded connection keys.
-                        </div>
-                    </div>
-                )}
-
-                <p className="text-sm text-gray-400 mb-6">
-                    Connect to JSONBin.io to allow users to sync data across different devices.
-                </p>
-
-                <div className="space-y-4">
-                    <div>
-                        <label className="text-xs font-bold text-gray-500 block mb-1">Bin ID</label>
-                        <input 
-                            type="text" 
-                            value={cloudConfig.binId} 
-                            onChange={(e) => setCloudConfig({...cloudConfig, binId: e.target.value})}
-                            className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:border-blue-500 focus:outline-none font-mono"
-                            placeholder="e.g. 65d4f..."
-                        />
-                    </div>
-                    <div>
-                        <label className="text-xs font-bold text-gray-500 block mb-1">Master Key (X-Master-Key)</label>
-                        <input 
-                            type="password" 
-                            value={cloudConfig.apiKey} 
-                            onChange={(e) => setCloudConfig({...cloudConfig, apiKey: e.target.value})}
-                            className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:border-blue-500 focus:outline-none font-mono"
-                            placeholder="e.g. $2a$10$..."
-                        />
-                    </div>
-                    
-                    <div className="flex gap-4 pt-2">
-                        <button 
-                            onClick={handleSaveCloudConfig}
-                            disabled={isVerifying}
-                            className={`flex-1 py-3 rounded-xl font-bold text-white transition-colors flex items-center justify-center gap-2 ${isVerifying ? 'bg-blue-800' : 'bg-blue-600 hover:bg-blue-500'}`}
-                        >
-                            {isVerifying && <Loader2 className="animate-spin" size={18} />}
-                            {cloudConfig.enabled ? 'Update Connection' : 'Connect Cloud'}
-                        </button>
-                        
-                        {cloudConfig.enabled && !isVerifying && (
-                            <button 
-                                onClick={handleDisconnectOrReset}
-                                className={`px-6 py-3 rounded-xl font-bold transition-colors flex items-center gap-2 ${hasDefaults ? 'bg-yellow-600/50 text-yellow-200 hover:bg-yellow-600' : 'bg-red-900/50 text-red-300 hover:bg-red-900'}`}
-                            >
-                                {hasDefaults ? <RefreshCw size={18} /> : <CloudOff size={18} />}
-                                {hasDefaults ? 'Reset to Default' : 'Disconnect'}
-                            </button>
-                        )}
+                <div className="mb-6 p-4 bg-blue-900/20 border border-blue-400/30 rounded-xl flex items-center justify-between gap-3">
+                    <div className="text-sm text-blue-200">
+                        <strong>Firebase Active:</strong> Application is fully connected and auto-syncing with Cloud Firestore. Data limits are managed by Firebase.
                     </div>
                 </div>
             </div>
