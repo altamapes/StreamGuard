@@ -17,7 +17,8 @@ export const fetchRecentTracks = async (
   username: string, 
   apiKey: string, 
   from?: number, 
-  to?: number
+  to?: number,
+  limit: number = 200
 ): Promise<LastFmTrack[]> => {
   if (!username) return [];
 
@@ -35,7 +36,7 @@ export const fetchRecentTracks = async (
             // If checking for today, return empty to simulate "not played yet"
             resolve([]);
         } else {
-            resolve(mockData);
+            resolve(mockData.slice(0, limit));
         }
       }, 1000);
     });
@@ -44,7 +45,7 @@ export const fetchRecentTracks = async (
   try {
     const encodedUser = encodeURIComponent(username.trim());
     const cleanKey = apiKey.trim();
-    let url = `${LAST_FM_API_URL}?method=user.getrecenttracks&user=${encodedUser}&api_key=${cleanKey}&format=json&limit=200`;
+    let url = `${LAST_FM_API_URL}?method=user.getrecenttracks&user=${encodedUser}&api_key=${cleanKey}&format=json&limit=${limit}`;
     
     if (from) url += `&from=${from}`;
     if (to) url += `&to=${to}`;

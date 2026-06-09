@@ -96,9 +96,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     // Using current time or end of the target date conceptually
     // To simplify for this view, we'll fetch the last 50 tracks collectively
     try {
-      const accountsToSync = user.lastFmAccounts?.length 
-        ? user.lastFmAccounts 
-        : [{ username: user.lastFmUsername, apiKey: user.lastFmApiKey }];
+      const primaryAccount = user.lastFmAccounts?.find(a => a.isPrimary) 
+        || user.lastFmAccounts?.[0] 
+        || { username: user.lastFmUsername, apiKey: user.lastFmApiKey };
+
+      const accountsToSync = [primaryAccount];
 
       let allRecentTracks: any[] = [];
       const fetchPromises = accountsToSync.map(account => {
