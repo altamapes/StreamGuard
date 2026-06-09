@@ -44,40 +44,6 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const [editWhatsappName, setEditWhatsappName] = useState('');
   const [editWhatsappNumber, setEditWhatsappNumber] = useState('');
 
-  // Other Members Activity
-  const [otherMembersActivity, setOtherMembersActivity] = useState<{user: User, track: any | null}[]>([]);
-  const [isLoadingActivity, setIsLoadingActivity] = useState(false);
-
-  useEffect(() => {
-    const fetchActivities = async () => {
-      try {
-          setIsLoadingActivity(true);
-          const allUsers = await storageService.getUsers();
-          const others = allUsers.filter(u => u.id !== currentUser.id);
-          const activities = await Promise.all(others.map(async (u) => {
-              try {
-                  const primaryAcc = u.lastFmAccounts?.find(a => a.isPrimary) || u.lastFmAccounts?.[0] || { username: u.lastFmUsername, apiKey: u.lastFmApiKey };
-                  if (primaryAcc && primaryAcc.username) {
-                      // Fetch just 1 recent track
-                      const recentTracks = await fetchRecentTracks(primaryAcc.username, primaryAcc.apiKey || u.lastFmApiKey, undefined, undefined, 1);
-                      return { user: u, track: recentTracks.length > 0 ? recentTracks[0] : null };
-                  }
-              } catch (e) {
-                  // ignore
-              }
-              return { user: u, track: null };
-          }));
-          // Sort by recently active if needed, but for now just filter those who have tracks
-          setOtherMembersActivity(activities.filter(a => a.track));
-      } catch (e) {
-         console.error('Failed to fetch user activities', e);
-      } finally {
-         setIsLoadingActivity(false);
-      }
-    };
-    fetchActivities();
-  }, [currentUser.id]);
-
   // Day Selection State
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
@@ -618,46 +584,6 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
           </div>
 
           {renderButton()}
-
-          {/* Recent Members Activity */}
-          <div className="mt-8">
-              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                 <Headphones className="text-neon-purple" size={20} />
-                 Aktivitas Member Lain
-              </h3>
-              
-              <div className="space-y-3">
-                  {isLoadingActivity ? (
-                      <div className="text-center py-4 text-gray-500 flex flex-col items-center">
-                          <RefreshCw className="animate-spin mb-2" size={20} />
-                          <span className="text-xs">Memuat aktivitas...</span>
-                      </div>
-                  ) : otherMembersActivity.length === 0 ? (
-                      <div className="text-center py-4 text-gray-500 text-sm italic bg-white/5 rounded-xl border border-white/5">
-                          Belum ada aktivitas
-                      </div>
-                  ) : (
-                      otherMembersActivity.map((activity, idx) => (
-                          <div key={idx} className="flex gap-3 items-center bg-black/40 p-3 rounded-xl border border-white/5 hover:bg-black/60 transition-colors">
-                              <div className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center font-bold text-white border border-white/10" style={{ backgroundColor: `hsl(${idx * 40}, 70%, 20%)` }}>
-                                  {activity.user.appUsername.charAt(0).toUpperCase()}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                  <div className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">{activity.user.appUsername}</div>
-                                  <div className="text-sm font-bold text-white truncate leading-tight">{activity.track.name}</div>
-                                  <div className="text-xs text-gray-500 truncate">{activity.track.artist['#text']}</div>
-                              </div>
-                              {activity.track['@attr']?.nowplaying === 'true' && (
-                                  <div className="shrink-0 flex items-center gap-1">
-                                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                      <span className="text-[10px] text-green-500 font-bold uppercase track-wider">Now Playing</span>
-                                  </div>
-                              )}
-                          </div>
-                      ))
-                  )}
-              </div>
-          </div>
 
         </div>
       )}
