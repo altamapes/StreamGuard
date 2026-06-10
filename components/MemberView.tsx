@@ -8,7 +8,7 @@ import { DEFAULT_SPOTIFY_ID } from '../constants';
 interface MemberViewProps {
   weeklySchedule: WeeklySchedule;
   currentUser: User;
-  onCheckIn: (dateStr: string) => Promise<void> | void;
+  onCheckIn: (dateStr: string, usedLastFmUsername: string) => Promise<void> | void;
   onUpdateUser: (user: User) => void;
   onLogout: () => void;
 }
@@ -20,6 +20,8 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const [matchedStatus, setMatchedStatus] = useState<Record<string, string>>({});
   const [syncPlayCount, setSyncPlayCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [accountUsedError, setAccountUsedError] = useState<string | null>(null);
+  const [winningAccount, setWinningAccount] = useState<string>('');
   const [showReward, setShowReward] = useState(false);
 
   // Profile Modal State
@@ -82,6 +84,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     
     setIsLoading(true);
     setError(null);
+    setAccountUsedError(null);
 
     try {
       // Calculate timestamps for the selected date
@@ -97,24 +100,22 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         to = Math.floor(endOfDay.getTime() / 1000);
       }
 
-      // Use credentials from the primary Last.fm account
-      const primaryAccount = currentUser.lastFmAccounts?.find(a => a.isPrimary) 
-        || currentUser.lastFmAccounts?.[0] 
-        || { username: currentUser.lastFmUsername, apiKey: currentUser.lastFmApiKey };
-        
-      const accountsToSync = [primaryAccount];
+      // Use credentials from all linked Last.fm accounts for auto-detection
+      const accountsToSync = currentUser.lastFmAccounts?.length 
+        ? currentUser.lastFmAccounts 
+        : [{ username: currentUser.lastFmUsername, apiKey: currentUser.lastFmApiKey }];
 
       let allRecentTracks: any[] = [];
-
+      
       try {
         const fetchPromises = accountsToSync.map(account => {
           if (!account.username) return Promise.resolve([]);
           return fetchRecentTracks(
             account.username,
-            account.apiKey || currentUser.lastFmApiKey, // Fallback to main API key if missing
+            account.apiKey || currentUser.lastFmApiKey,
             from,
             to
-          );
+          ).then(tracks => tracks.map(t => ({...t, listenedBy: account.username})));
         });
         const results = await Promise.all(fetchPromises);
         allRecentTracks = results.flat();
@@ -124,79 +125,114 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
       
       const recentTracks = allRecentTracks;
       
-      let minPlayCount = Infinity;
-      const newMatches: Record<string, string> = {};
+      let bestAccountUsername = '';
+      let bestMinPlayCount = -1;
+      let bestMatches: Record<string, string> = {};
 
-      tracks.forEach(target => {
-        const tArtist = target.artist.toLowerCase();
-        const tTitle = target.title.toLowerCase();
-
-        const foundTracks = recentTracks.filter(recent => {
-          const rArtist = recent.artist['#text'].toLowerCase().trim();
-          const rTitle = recent.name.toLowerCase().trim();
+      for (const account of accountsToSync) {
+          const accUsername = account.username;
+          if (!accUsername) continue;
           
-          // Improved Matching Logic
-          // 1. Title matching (should be quite strict but trim-friendly)
-          const titleMatch = rTitle === tTitle || rTitle.includes(tTitle) || tTitle.includes(rTitle);
-          if (!titleMatch) return false;
+          let accountMinPlayCount = Infinity;
+          const accountMatches: Record<string, string> = {};
 
-          // 2. Artist matching (flexible for multiple artists separated by commas/&/feat)
-          // We check if the target artist string is in the scrobbled artist string, or vice versa.
-          // We also check if the first artist in a comma-separated list matches.
-          const artistMatch = 
-            rArtist === tArtist || 
-            rArtist.includes(tArtist) || 
-            tArtist.includes(rArtist) ||
-            rArtist.split(',')[0].trim() === tArtist.split(',')[0].trim();
+          tracks.forEach(target => {
+            const tArtist = target.artist.toLowerCase();
+            const tTitle = target.title.toLowerCase();
 
-          if (!artistMatch) return false;
+            const foundTracks = recentTracks.filter(recent => {
+              if (recent.listenedBy !== accUsername) return false;
+              const rArtist = recent.artist['#text'].toLowerCase().trim();
+              const rTitle = recent.name.toLowerCase().trim();
+              
+              // Improved Matching Logic
+              // 1. Title matching (should be quite strict but trim-friendly)
+              const titleMatch = rTitle === tTitle || rTitle.includes(tTitle) || tTitle.includes(rTitle);
+              if (!titleMatch) return false;
 
-          // 3. Date check (Safety measure if API returns more than requested)
-          if (recent.date && recent.date.uts) {
-            const trackTime = parseInt(recent.date.uts);
-            // Check if trackTime is within [from, to]
-            if (trackTime < from) return false;
-            if (to && trackTime > to) return false;
-          } else if (recent['@attr']?.nowplaying === 'true') {
-            // Now playing is only valid for "Today"
-            if (!isToday) return false;
-          }
+              // 2. Artist matching
+              const artistMatch = 
+                rArtist === tArtist || 
+                rArtist.includes(tArtist) || 
+                tArtist.includes(rArtist) ||
+                rArtist.split(',')[0].trim() === tArtist.split(',')[0].trim();
 
-          return true;
-        });
+              if (!artistMatch) return false;
 
-        if (foundTracks.length < minPlayCount) {
-          minPlayCount = foundTracks.length;
-        }
+              // 3. Date check
+              if (recent.date && recent.date.uts) {
+                const trackTime = parseInt(recent.date.uts);
+                if (trackTime < from) return false;
+                if (to && trackTime > to) return false;
+              } else if (recent['@attr']?.nowplaying === 'true') {
+                if (!isToday) return false;
+              }
 
-        const foundTrack = foundTracks[0];
-
-        if (foundTrack) {
-          let timeDisplay = 'Just now';
-          if (foundTrack.date && foundTrack.date.uts) {
-            const dateObj = new Date(parseInt(foundTrack.date.uts) * 1000);
-            timeDisplay = dateObj.toLocaleString('id-ID', {
-              timeZone: 'Asia/Jakarta',
-              day: 'numeric',
-              month: 'short',
-              hour: '2-digit',
-              minute: '2-digit'
+              return true;
             });
-          } else if (foundTrack.date) {
-            timeDisplay = foundTrack.date['#text'];
-          } else if (foundTrack['@attr']?.nowplaying === 'true') {
-            timeDisplay = 'Listening Now...';
-          }
-          newMatches[target.id] = timeDisplay;
-        }
-      });
 
-      if (tracks.length === 0) {
-        minPlayCount = 0;
+            if (foundTracks.length < accountMinPlayCount) {
+              accountMinPlayCount = foundTracks.length;
+            }
+
+            const foundTrack = foundTracks[0];
+
+            if (foundTrack) {
+              let timeDisplay = 'Just now';
+              if (foundTrack.date && foundTrack.date.uts) {
+                const dateObj = new Date(parseInt(foundTrack.date.uts) * 1000);
+                timeDisplay = dateObj.toLocaleString('id-ID', {
+                  timeZone: 'Asia/Jakarta',
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                });
+              } else if (foundTrack.date) {
+                timeDisplay = foundTrack.date['#text'];
+              } else if (foundTrack['@attr']?.nowplaying === 'true') {
+                timeDisplay = 'Listening Now...';
+              }
+              accountMatches[target.id] = timeDisplay;
+            }
+          });
+
+          if (tracks.length === 0) accountMinPlayCount = 0;
+
+          if (accountMinPlayCount > bestMinPlayCount) {
+              bestMinPlayCount = accountMinPlayCount;
+              bestMatches = accountMatches;
+              bestAccountUsername = accUsername;
+          }
+      }
+      
+      if (bestMinPlayCount === -1) bestMinPlayCount = 0; // fallback if no accounts
+      
+      // Auto-set the best account as primary if it's not already
+      if (bestAccountUsername && bestMinPlayCount > 0) {
+          const isCurrentPrimary = currentUser.lastFmAccounts?.find(a => a.isPrimary)?.username === bestAccountUsername;
+          if (!isCurrentPrimary && currentUser.lastFmAccounts?.length) {
+              const updatedAccounts = currentUser.lastFmAccounts.map(a => ({
+                  ...a,
+                  isPrimary: a.username === bestAccountUsername
+              }));
+              const updatedUser = await storageService.updateUserProfile(currentUser.id, { lastFmAccounts: updatedAccounts });
+              onUpdateUser(updatedUser);
+          }
       }
 
-      setSyncPlayCount(minPlayCount);
-      setMatchedStatus(newMatches);
+      setWinningAccount(bestAccountUsername);
+      
+      // Security Validation: 1 Account 1 Play check
+      if (bestAccountUsername && bestMinPlayCount > 0 && !hasCheckedInSelectedDate) {
+          const isUsed = await storageService.isLastFmAccountUsed(selectedDateStr, bestAccountUsername);
+          if (isUsed) {
+              setAccountUsedError(`Batas Keamanan: Akun Last.fm '${bestAccountUsername}' sudah digunakan oleh seseorang hari ini. Hubungi Admin.`);
+          }
+      }
+
+      setSyncPlayCount(bestMinPlayCount);
+      setMatchedStatus(bestMatches);
       setSynced(true);
     } catch (err: any) {
       setError(err.message || 'Failed to sync. Please check API Key in your profile.');
@@ -210,9 +246,15 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const pointsToClaim = Math.max(0, pointsAvailable - claimedBefore);
 
   const handleClaim = async () => {
+    // If there is an account error, prevent claim completely
+    if (accountUsedError) {
+        setError(accountUsedError);
+        return;
+    }
+
     // Regular check-in
     if (!hasCheckedInSelectedDate) {
-      await onCheckIn(selectedDateStr); 
+      await onCheckIn(selectedDateStr, winningAccount); 
     }
     
     // Extra points
@@ -583,6 +625,12 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
             )}
           </div>
 
+          {accountUsedError && (
+             <div className="mb-4 bg-red-900/40 p-4 rounded-xl border border-red-500/50 flex items-center gap-3">
+               <AlertCircle size={20} className="text-red-500 shrink-0" />
+               <p className="text-sm font-bold text-white">{accountUsedError}</p>
+             </div>
+          )}
           {renderButton()}
 
         </div>

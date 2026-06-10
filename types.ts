@@ -75,4 +75,5 @@ export interface AppData {
   spotifyPlaylistId?: string; // Legacy fallback
   weeklySchedule?: WeeklySchedule; // New Weekly System
   adminPin?: string; // Custom Admin PIN
+  dailyUsedLastFmAccounts?: Record<string, string[]>; // Map of dateString -> array of used lastFm usernames
 }

@@ -43,7 +43,8 @@ export const storageService = {
             tracks: Array.isArray(record.tracks) ? record.tracks : (record.tracks || DEFAULT_TRACKS),
             spotifyPlaylistId: record.spotifyPlaylistId || DEFAULT_SPOTIFY_ID,
             weeklySchedule: record.weeklySchedule || {},
-            adminPin: record.adminPin || ADMIN_PIN
+            adminPin: record.adminPin || ADMIN_PIN,
+            dailyUsedLastFmAccounts: record.dailyUsedLastFmAccounts || {}
         };
       } else {
          console.warn("No data in Firebase yet, will try to fall back to local");
@@ -58,15 +59,18 @@ export const storageService = {
     const spotifyIdStr = localStorage.getItem(STORAGE_KEY_SPOTIFY);
     const scheduleStr = localStorage.getItem('streamguard_schedule');
     const pinStr = localStorage.getItem('streamguard_admin_pin');
+    const usedAccStr = localStorage.getItem('streamguard_used_accounts');
     
     let users = [];
     let tracks = DEFAULT_TRACKS;
     let weeklySchedule = {};
+    let dailyUsedLastFmAccounts = {};
 
     try {
         if (usersStr) users = JSON.parse(usersStr) || [];
         if (tracksStr) tracks = JSON.parse(tracksStr) || DEFAULT_TRACKS;
         if (scheduleStr) weeklySchedule = JSON.parse(scheduleStr) || {};
+        if (usedAccStr) dailyUsedLastFmAccounts = JSON.parse(usedAccStr) || {};
     } catch (e) { console.error("Error parsing local data", e); }
     
     const localData = {
@@ -74,7 +78,8 @@ export const storageService = {
       tracks,
       spotifyPlaylistId: spotifyIdStr || DEFAULT_SPOTIFY_ID,
       weeklySchedule,
-      adminPin: pinStr || ADMIN_PIN
+      adminPin: pinStr || ADMIN_PIN,
+      dailyUsedLastFmAccounts
     };
 
     // Auto-seed Firebase so we don't lose the local fallback data on next fetches from other devices
@@ -111,6 +116,7 @@ export const storageService = {
     if (data.spotifyPlaylistId) localStorage.setItem(STORAGE_KEY_SPOTIFY, data.spotifyPlaylistId);
     if (data.weeklySchedule) localStorage.setItem('streamguard_schedule', JSON.stringify(data.weeklySchedule));
     if (data.adminPin) localStorage.setItem('streamguard_admin_pin', data.adminPin);
+    if (data.dailyUsedLastFmAccounts) localStorage.setItem('streamguard_used_accounts', JSON.stringify(data.dailyUsedLastFmAccounts));
   },
 
   // --- PUBLIC METHODS ---
@@ -148,11 +154,22 @@ export const storageService = {
     return user;
   },
 
-  async updateUserCheckIn(userId: string, dateString: string): Promise<User> {
+  async updateUserCheckIn(userId: string, dateString: string, usedLastFmUsername: string): Promise<User> {
     const data = await this._fetchFullData();
     const users = Array.isArray(data.users) ? data.users : [];
     let updatedUser: User | null = null;
     
+    // Track Last Fm Account usage to prevent 1 account being used multiple times a day
+    const dailyUsedMap = data.dailyUsedLastFmAccounts || {};
+    const usedToday = dailyUsedMap[dateString] || [];
+    
+    if (usedLastFmUsername) {
+        if (!usedToday.includes(usedLastFmUsername)) {
+            usedToday.push(usedLastFmUsername);
+        }
+        dailyUsedMap[dateString] = usedToday;
+    }
+
     const newUsers = users.map(u => {
       if (u.id === userId) {
         const history = u.checkInHistory || [];
@@ -171,8 +188,15 @@ export const storageService = {
 
     if (!updatedUser) throw new Error('User not found');
     
-    await this._saveFullData({ ...data, users: newUsers });
+    await this._saveFullData({ ...data, users: newUsers, dailyUsedLastFmAccounts: dailyUsedMap });
     return updatedUser!;
+  },
+
+  async isLastFmAccountUsed(dateString: string, username: string): Promise<boolean> {
+      if (!username) return false;
+      const data = await this._fetchFullData();
+      const usedToday = data.dailyUsedLastFmAccounts?.[dateString] || [];
+      return usedToday.includes(username);
   },
 
   // NEW: Method to update user profile (Last.fm, Password, etc.)

@@ -77,11 +77,11 @@ function App() {
   };
 
   // Check-In Logic
-  const handleUserCheckIn = async (dateStr: string) => {
+  const handleUserCheckIn = async (dateStr: string, usedLastFmUsername: string) => {
     if (!currentUser) return;
     
     try {
-      const updatedUser = await storageService.updateUserCheckIn(currentUser.id, dateStr);
+      const updatedUser = await storageService.updateUserCheckIn(currentUser.id, dateStr, usedLastFmUsername);
       setCurrentUser(updatedUser);
     } catch (e) {
       console.error("Check-in failed", e);
