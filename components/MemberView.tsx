@@ -8,7 +8,7 @@ import { DEFAULT_SPOTIFY_ID } from '../constants';
 interface MemberViewProps {
   weeklySchedule: WeeklySchedule;
   currentUser: User;
-  onCheckIn: (dateStr: string, usedLastFmUsername: string) => Promise<void> | void;
+  onCheckIn: (dateStr: string, usedLastFmUsername: string | string[]) => Promise<void> | void;
   onUpdateUser: (user: User) => void;
   onLogout: () => void;
 }
@@ -21,7 +21,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const [syncPlayCount, setSyncPlayCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [accountUsedError, setAccountUsedError] = useState<string | null>(null);
-  const [winningAccount, setWinningAccount] = useState<string>('');
+  const [winningAccount, setWinningAccount] = useState<string | string[]>('');
   const [showReward, setShowReward] = useState(false);
 
   // Profile Modal State
@@ -125,114 +125,103 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
       
       const recentTracks = allRecentTracks;
       
-      let bestAccountUsername = '';
-      let bestMinPlayCount = -1;
-      let bestMatches: Record<string, string> = {};
+      let totalMinPlayCount = Infinity;
+      let combinedMatches: Record<string, string> = {};
+      const contributingAccounts = new Set<string>();
 
-      for (const account of accountsToSync) {
-          const accUsername = account.username;
-          if (!accUsername) continue;
-          
-          let accountMinPlayCount = Infinity;
-          const accountMatches: Record<string, string> = {};
-
-          tracks.forEach(target => {
-            const tArtist = target.artist.toLowerCase();
-            const tTitle = target.title.toLowerCase();
-
-            const foundTracks = recentTracks.filter(recent => {
-              if (recent.listenedBy !== accUsername) return false;
-              const rArtist = recent.artist['#text'].toLowerCase().trim();
-              const rTitle = recent.name.toLowerCase().trim();
-              
-              // Improved Matching Logic
-              // 1. Title matching (should be quite strict but trim-friendly)
-              const titleMatch = rTitle === tTitle || rTitle.includes(tTitle) || tTitle.includes(rTitle);
-              if (!titleMatch) return false;
-
-              // 2. Artist matching
-              const artistMatch = 
-                rArtist === tArtist || 
-                rArtist.includes(tArtist) || 
-                tArtist.includes(rArtist) ||
-                rArtist.split(',')[0].trim() === tArtist.split(',')[0].trim();
-
-              if (!artistMatch) return false;
-
-              // 3. Date check
-              if (recent.date && recent.date.uts) {
-                const trackTime = parseInt(recent.date.uts);
-                if (trackTime < from) return false;
-                if (to && trackTime > to) return false;
-              } else if (recent['@attr']?.nowplaying === 'true') {
-                if (!isToday) return false;
+      // Filter available accounts (prevent using accounts checked in by others)
+      const accountsToUse: string[] = [];
+      const errorMessages: string[] = [];
+      
+      for (const acc of accountsToSync) {
+          if (!acc.username) continue;
+          if (!hasCheckedInSelectedDate) {
+              const isUsed = await storageService.isLastFmAccountUsed(selectedDateStr, acc.username);
+              if (isUsed) {
+                  errorMessages.push(`Akun '${acc.username}' sudah digunakan.`);
+              } else {
+                  accountsToUse.push(acc.username);
               }
+          } else {
+              accountsToUse.push(acc.username);
+          }
+      }
 
-              return true;
-            });
+      if (errorMessages.length > 0) {
+          setAccountUsedError(`Batas Keamanan: ${errorMessages.join(" ")} Hubungi Admin.`);
+      }
 
-            if (foundTracks.length < accountMinPlayCount) {
-              accountMinPlayCount = foundTracks.length;
-            }
+      tracks.forEach(target => {
+          const tArtist = target.artist.toLowerCase();
+          const tTitle = target.title.toLowerCase();
 
-            const foundTrack = foundTracks[0];
+          const foundTracks = recentTracks.filter(recent => {
+             // Only count if from an available account
+             if (!accountsToUse.includes(recent.listenedBy)) return false;
 
-            if (foundTrack) {
-              let timeDisplay = 'Just now';
-              if (foundTrack.date && foundTrack.date.uts) {
-                const dateObj = new Date(parseInt(foundTrack.date.uts) * 1000);
-                timeDisplay = dateObj.toLocaleString('id-ID', {
-                  timeZone: 'Asia/Jakarta',
-                  day: 'numeric',
-                  month: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                });
-              } else if (foundTrack.date) {
-                timeDisplay = foundTrack.date['#text'];
-              } else if (foundTrack['@attr']?.nowplaying === 'true') {
-                timeDisplay = 'Listening Now...';
-              }
-              accountMatches[target.id] = timeDisplay;
-            }
+             const rArtist = recent.artist['#text'].toLowerCase().trim();
+             const rTitle = recent.name.toLowerCase().trim();
+             
+             // 1. Title matching
+             const titleMatch = rTitle === tTitle || rTitle.includes(tTitle) || tTitle.includes(rTitle);
+             if (!titleMatch) return false;
+
+             // 2. Artist matching
+             const artistMatch = 
+                 rArtist === tArtist || 
+                 rArtist.includes(tArtist) || 
+                 tArtist.includes(rArtist) ||
+                 rArtist.split(',')[0].trim() === tArtist.split(',')[0].trim();
+
+             if (!artistMatch) return false;
+
+             // 3. Date check
+             if (recent.date && recent.date.uts) {
+                 const trackTime = parseInt(recent.date.uts);
+                 if (trackTime < from) return false;
+                 if (to && trackTime > to) return false;
+             } else if (recent['@attr']?.nowplaying === 'true') {
+                 if (!isToday) return false;
+             }
+
+             return true;
           });
 
-          if (tracks.length === 0) accountMinPlayCount = 0;
-
-          if (accountMinPlayCount > bestMinPlayCount) {
-              bestMinPlayCount = accountMinPlayCount;
-              bestMatches = accountMatches;
-              bestAccountUsername = accUsername;
+          if (foundTracks.length < totalMinPlayCount) {
+             totalMinPlayCount = foundTracks.length;
           }
-      }
-      
-      if (bestMinPlayCount === -1) bestMinPlayCount = 0; // fallback if no accounts
-      
-      // Auto-set the best account as primary if it's not already
-      if (bestAccountUsername && bestMinPlayCount > 0) {
-          const isCurrentPrimary = currentUser.lastFmAccounts?.find(a => a.isPrimary)?.username === bestAccountUsername;
-          if (!isCurrentPrimary && currentUser.lastFmAccounts?.length) {
-              const updatedAccounts = currentUser.lastFmAccounts.map(a => ({
-                  ...a,
-                  isPrimary: a.username === bestAccountUsername
-              }));
-              const updatedUser = await storageService.updateUserProfile(currentUser.id, { lastFmAccounts: updatedAccounts });
-              onUpdateUser(updatedUser);
-          }
-      }
 
-      setWinningAccount(bestAccountUsername);
-      
-      // Security Validation: 1 Account 1 Play check
-      if (bestAccountUsername && bestMinPlayCount > 0 && !hasCheckedInSelectedDate) {
-          const isUsed = await storageService.isLastFmAccountUsed(selectedDateStr, bestAccountUsername);
-          if (isUsed) {
-              setAccountUsedError(`Batas Keamanan: Akun Last.fm '${bestAccountUsername}' sudah digunakan oleh seseorang hari ini. Hubungi Admin.`);
-          }
-      }
+          foundTracks.forEach(ft => contributingAccounts.add(ft.listenedBy));
+          const foundTrack = foundTracks[0];
 
-      setSyncPlayCount(bestMinPlayCount);
-      setMatchedStatus(bestMatches);
+          if (foundTrack) {
+             let timeDisplay = 'Just now';
+             if (foundTrack.date && foundTrack.date.uts) {
+                 const dateObj = new Date(parseInt(foundTrack.date.uts) * 1000);
+                 timeDisplay = dateObj.toLocaleString('id-ID', {
+                   timeZone: 'Asia/Jakarta',
+                   day: 'numeric',
+                   month: 'short',
+                   hour: '2-digit',
+                   minute: '2-digit'
+                 });
+             } else if (foundTrack.date) {
+                 timeDisplay = foundTrack.date['#text'];
+             } else if (foundTrack['@attr']?.nowplaying === 'true') {
+                 timeDisplay = 'Listening Now...';
+             }
+             combinedMatches[target.id] = `${timeDisplay} (${foundTrack.listenedBy})`;
+          }
+      });
+
+      if (tracks.length === 0) totalMinPlayCount = 0;
+      if (totalMinPlayCount === Infinity) totalMinPlayCount = 0;
+      
+      const winningUsernames = Array.from(contributingAccounts);
+      setWinningAccount(winningUsernames);
+      
+      setSyncPlayCount(totalMinPlayCount);
+      setMatchedStatus(combinedMatches);
       setSynced(true);
     } catch (err: any) {
       setError(err.message || 'Failed to sync. Please check API Key in your profile.');

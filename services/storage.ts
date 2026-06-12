@@ -154,7 +154,7 @@ export const storageService = {
     return user;
   },
 
-  async updateUserCheckIn(userId: string, dateString: string, usedLastFmUsername: string): Promise<User> {
+  async updateUserCheckIn(userId: string, dateString: string, usedLastFmUsername: string | string[]): Promise<User> {
     const data = await this._fetchFullData();
     const users = Array.isArray(data.users) ? data.users : [];
     let updatedUser: User | null = null;
@@ -164,9 +164,12 @@ export const storageService = {
     const usedToday = dailyUsedMap[dateString] || [];
     
     if (usedLastFmUsername) {
-        if (!usedToday.includes(usedLastFmUsername)) {
-            usedToday.push(usedLastFmUsername);
-        }
+        const usernames = Array.isArray(usedLastFmUsername) ? usedLastFmUsername : [usedLastFmUsername];
+        usernames.forEach(username => {
+            if (!usedToday.includes(username)) {
+                usedToday.push(username);
+            }
+        });
         dailyUsedMap[dateString] = usedToday;
     }
 

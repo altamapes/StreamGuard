@@ -77,7 +77,7 @@ function App() {
   };
 
   // Check-In Logic
-  const handleUserCheckIn = async (dateStr: string, usedLastFmUsername: string) => {
+  const handleUserCheckIn = async (dateStr: string, usedLastFmUsername: string | string[]) => {
     if (!currentUser) return;
     
     try {
