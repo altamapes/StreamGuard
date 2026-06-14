@@ -396,9 +396,9 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
       return (
         <button 
           disabled
-          className="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 bg-green-900/20 text-green-400 border border-green-500/30 cursor-not-allowed opacity-80"
+          className="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 bg-transparent text-green-500 border border-green-500/30 cursor-not-allowed"
         >
-          <CalendarCheck size={24} />
+          <CalendarCheck size={22} />
           Checked In for {selectedDate.toDateString() === new Date().toDateString() ? 'Today' : selectedDate.toLocaleDateString('en-US', { weekday: 'short' })}
         </button>
       );
