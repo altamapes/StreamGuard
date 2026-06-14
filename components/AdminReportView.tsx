@@ -26,7 +26,8 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
   today.setHours(0,0,0,0);
 
   if (reportType === 'daily') {
-    const d = new Date(selectedDailyDate);
+    const [yStr, mStr, dStr] = selectedDailyDate.split('-');
+    const d = new Date(parseInt(yStr), parseInt(mStr) - 1, parseInt(dStr));
     d.setHours(0,0,0,0);
     const dateStr = d.toLocaleDateString();
     const shortDate = d.toLocaleDateString('id-ID', {day: 'numeric', month: 'short'});
@@ -45,7 +46,8 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
     datesToCheck.push({ dateStr, dayIndex, hasTracks: !!hasTracks, isPast, possibleDates, shortDate });
 
   } else if (reportType === 'weekly') {
-    const endDate = new Date(selectedWeekEnd);
+    const [yStrW, mStrW, dStrW] = selectedWeekEnd.split('-');
+    const endDate = new Date(parseInt(yStrW), parseInt(mStrW) - 1, parseInt(dStrW));
     endDate.setHours(0,0,0,0);
     
     // Look back 7 days ending at endDate
@@ -227,9 +229,19 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
                 </h3>
                 <p className="text-sm text-gray-400 mt-1">
                     {reportType === 'daily' ? (
-                       <>Menampilkan status check-in pada <span className="text-white font-bold">{new Date(selectedDailyDate).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</span>.</>
+                       <>Menampilkan status check-in pada <span className="text-white font-bold">{
+                          (() => {
+                             const [y, m, d] = selectedDailyDate.split('-');
+                             return new Date(parseInt(y), parseInt(m) - 1, parseInt(d)).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})
+                          })()
+                       }</span>.</>
                     ) : reportType === 'weekly' ? (
-                       <>Menampilkan rekapitulasi 7 hari terakhir dari tanggal <span className="text-white font-bold">{new Date(selectedWeekEnd).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</span>.</>
+                       <>Menampilkan rekapitulasi 7 hari terakhir dari tanggal <span className="text-white font-bold">{
+                          (() => {
+                             const [y, m, d] = selectedWeekEnd.split('-');
+                             return new Date(parseInt(y), parseInt(m) - 1, parseInt(d)).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})
+                          })()
+                       }</span>.</>
                     ) : (
                        <>Menampilkan rekapitulasi selama bulan <span className="text-white font-bold">{new Date(selectedMonth + '-01').toLocaleDateString('id-ID', {month: 'long', year: 'numeric'})}</span>.</>
                     )}

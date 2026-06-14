@@ -92,13 +92,8 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
       startOfDay.setHours(0, 0, 0, 0);
       const from = Math.floor(startOfDay.getTime() / 1000);
       
-      let to: number | undefined = undefined;
+      let to: number | undefined = undefined; // We no longer restrict 'to' end of day so users can pay debt (bayar hutang) by listening now
       const isToday = selectedDate.toDateString() === new Date().toDateString();
-      if (!isToday) {
-        const endOfDay = new Date(selectedDate);
-        endOfDay.setHours(23, 59, 59, 999);
-        to = Math.floor(endOfDay.getTime() / 1000);
-      }
 
       // Use credentials from all linked Last.fm accounts for auto-detection
       const accountsToSync = currentUser.lastFmAccounts?.length 
@@ -180,9 +175,8 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                  const trackTime = parseInt(recent.date.uts);
                  if (trackTime < from) return false;
                  if (to && trackTime > to) return false;
-             } else if (recent['@attr']?.nowplaying === 'true') {
-                 if (!isToday) return false;
              }
+             // For 'nowplaying', we always accept it because 'bayar hutang' means they might be playing it right now
 
              return true;
           });
@@ -467,7 +461,8 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
             max={new Date().toISOString().split('T')[0]} // Cannot select future dates natively via max attribute (using UTC as approx is close enough, or precise local below)
             value={`${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`}
             onChange={(e) => {
-              const d = new Date(e.target.value);
+              const [y, m, dNum] = e.target.value.split('-');
+              const d = new Date(parseInt(y), parseInt(m) - 1, parseInt(dNum));
               // Avoid invalid dates
               if (!isNaN(d.getTime())) {
                 const today = new Date();
