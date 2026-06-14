@@ -4,6 +4,13 @@ import { LAST_FM_API_URL } from '../constants';
 interface LastFmResponse {
   recenttracks?: {
     track: LastFmTrack[] | LastFmTrack; // Could be array or single object
+    '@attr'?: {
+      page: string;
+      perPage: string;
+      user: string;
+      total: string;
+      totalPages: string;
+    };
   };
   error?: number;
   message?: string;
@@ -75,8 +82,36 @@ export const fetchRecentTracks = async (
     let tracks = data.recenttracks.track;
     tracks = Array.isArray(tracks) ? tracks : [tracks];
     
+    let allTracks = [...tracks];
+
+    // Check if we need to paginate (fetch up to 10 pages / 2000 tracks)
+    const totalPages = data.recenttracks['@attr']?.totalPages;
+    if (totalPages && parseInt(totalPages) > 1) {
+        const maxPages = Math.min(parseInt(totalPages), 10);
+        const fetchPromises = [];
+        // Last.fm pages are 1-indexed. We already fetched page 1
+        for (let i = 2; i <= maxPages; i++) {
+            const pageUrl = `${url}&page=${i}`;
+            fetchPromises.push(
+                fetch(pageUrl).then(res => res.json()).catch(err => {
+                    console.error(`Failed to fetch page ${i}:`, err);
+                    return null;
+                })
+            );
+        }
+        
+        const pagesData = await Promise.all(fetchPromises);
+        for (const pageData of pagesData) {
+            if (pageData && pageData.recenttracks && pageData.recenttracks.track) {
+                let pagedTracks = pageData.recenttracks.track;
+                pagedTracks = Array.isArray(pagedTracks) ? pagedTracks : [pagedTracks];
+                allTracks = allTracks.concat(pagedTracks);
+            }
+        }
+    }
+    
     // Inject the username that listened to these tracks
-    return tracks.map((t: any) => ({ ...t, listenedBy: username }));
+    return allTracks.map((t: any) => ({ ...t, listenedBy: username }));
 
   } catch (error: any) {
     console.error('API Error:', error);
