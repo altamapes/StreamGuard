@@ -235,17 +235,44 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         return;
     }
 
+    let extraBonusFromWeekly = 0;
+
     // Regular check-in
     if (!hasCheckedInSelectedDate) {
       await onCheckIn(selectedDateStr, winningAccount); 
+      
+      // Calculate how many days THIS week have been checked in (Mon-Sun block)
+      const checkDate = new Date(selectedDate);
+      const day = checkDate.getDay();
+      const diff = checkDate.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(checkDate.setDate(diff));
+      monday.setHours(0,0,0,0);
+      
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      sunday.setHours(23,59,59,999);
+
+      const history = currentUser.checkInHistory || [];
+      const checkedInDatesThisWeek = new Set(history.filter(d => {
+         const hd = new Date(d);
+         return hd >= monday && hd <= sunday;
+      }));
+      checkedInDatesThisWeek.add(selectedDateStr);
+
+      // If this check-in brings the weekly total past 5 (i.e. the 6th or 7th day checked in)
+      if (checkedInDatesThisWeek.size > 5) {
+         extraBonusFromWeekly = 1;
+      }
     }
     
     // Extra points
-    if (pointsToClaim > 0) {
+    if (pointsToClaim > 0 || extraBonusFromWeekly > 0) {
       try {
-        const newBalance = (currentUser.extraPointsBalance || 0) + pointsToClaim;
+        const newBalance = (currentUser.extraPointsBalance || 0) + pointsToClaim + extraBonusFromWeekly;
         const newClaimedDates = { ...(currentUser.extraPointsClaimedDates || {}) };
-        newClaimedDates[selectedDateStr] = pointsAvailable;
+        if (pointsToClaim > 0) {
+            newClaimedDates[selectedDateStr] = pointsAvailable;
+        }
 
         const updatedUser = await storageService.updateUserProfile(currentUser.id, {
           extraPointsBalance: newBalance,

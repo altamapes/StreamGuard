@@ -318,10 +318,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   };
 
   const calculateDebt = (user: User) => {
-    let debtCount = 0;
     const today = new Date();
     today.setHours(0,0,0,0);
     
+    let completedCount = 0;
+    let targetDaysCount = 0;
+
     // Check last 7 days (excluding today)
     for (let i = 1; i <= 7; i++) {
       const date = new Date();
@@ -341,11 +343,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
          isCheckedIn = possibleDates.some(pd => user.checkInHistory!.includes(pd));
       }
       
-      if (hasTracks && !isCheckedIn) {
-        debtCount++;
+      if (hasTracks) {
+        targetDaysCount++;
+        if (isCheckedIn) {
+          completedCount++;
+        }
       }
     }
-    return debtCount;
+    
+    // Max obligation in a 7-day sliding window is 5
+    const obligation = Math.min(targetDaysCount, 5);
+    return Math.max(0, obligation - completedCount);
   };
 
   // --- FILTER & STATS LOGIC ---

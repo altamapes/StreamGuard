@@ -88,24 +88,27 @@ export const fetchRecentTracks = async (
     const totalPages = data.recenttracks['@attr']?.totalPages;
     if (totalPages && parseInt(totalPages) > 1) {
         const maxPages = Math.min(parseInt(totalPages), 10);
-        const fetchPromises = [];
-        // Last.fm pages are 1-indexed. We already fetched page 1
+        // Last.fm pages are 1-indexed. We already fetched page 1.
+        // Fetch pages sequentially to avoid HTTP 429 Too Many Requests (Last.fm allows max 5 req/s)
         for (let i = 2; i <= maxPages; i++) {
-            const pageUrl = `${url}&page=${i}`;
-            fetchPromises.push(
-                fetch(pageUrl).then(res => res.json()).catch(err => {
-                    console.error(`Failed to fetch page ${i}:`, err);
-                    return null;
-                })
-            );
-        }
-        
-        const pagesData = await Promise.all(fetchPromises);
-        for (const pageData of pagesData) {
-            if (pageData && pageData.recenttracks && pageData.recenttracks.track) {
-                let pagedTracks = pageData.recenttracks.track;
-                pagedTracks = Array.isArray(pagedTracks) ? pagedTracks : [pagedTracks];
-                allTracks = allTracks.concat(pagedTracks);
+            try {
+                const pageUrl = `${url}&page=${i}`;
+                const res = await fetch(pageUrl);
+                if (!res.ok) {
+                    console.error(`Failed to fetch page ${i}: HTTP ${res.status}`);
+                    continue; // Skip failed page
+                }
+                const pageData = await res.json();
+                if (pageData && pageData.recenttracks && pageData.recenttracks.track) {
+                    let pagedTracks = pageData.recenttracks.track;
+                    pagedTracks = Array.isArray(pagedTracks) ? pagedTracks : [pagedTracks];
+                    allTracks = allTracks.concat(pagedTracks);
+                }
+                
+                // Small delay to respect rate limit
+                await new Promise(resolve => setTimeout(resolve, 200));
+            } catch (err) {
+                console.error(`Failed to fetch page ${i}:`, err);
             }
         }
     }

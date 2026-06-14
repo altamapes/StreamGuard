@@ -126,16 +126,20 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
       if (d.hasTracks) {
         if (isCheckedIn) {
           completedCount++;
-        } else if (d.isPast) { // Only count as debt if it's in the past
-           debtCount++;
-           missingDates.push(d.shortDate);
-        } else if (d.possibleDates.includes(today.toLocaleDateString())) {
-           // If it's today, it's missing if not checked in
-           debtCount++;
+        } else if (d.isPast || d.possibleDates.includes(today.toLocaleDateString())) {
            missingDates.push(d.shortDate);
         }
       }
     });
+
+    // The user's obligation is a maximum of 5 days per week.
+    // We calculate debt based on the max obligation minus what they've completed.
+    const obligation = Math.min(targetDaysCount, reportType === 'weekly' ? 5 : 5 * 4); // 5 per week
+    const pastTargetDaysCount = datesToCheck.filter(d => d.hasTracks && (d.isPast || d.possibleDates.includes(today.toLocaleDateString()))).length;
+    
+    // The current debt is max obligation (up to the current past days) minus completed.
+    const expectedSoFar = Math.min(pastTargetDaysCount, obligation);
+    debtCount = Math.max(0, expectedSoFar - completedCount);
 
     return { completedCount, debtCount, missingDates };
   };
