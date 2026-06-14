@@ -483,12 +483,12 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
       {/* Sync Button Only (No Inputs) */}
       <div className="w-full glass p-6 rounded-2xl mb-6 shadow-[0_0_30px_rgba(0,0,0,0.3)]">
         {isLockedHutang ? (
-            <div className="bg-red-900/30 border border-red-500/30 rounded-xl p-4 text-center">
-                <p className="text-red-400 font-bold mb-1">Fitur Pelunasan Terkunci</p>
-                <p className="text-red-300 text-sm">Pending Check-in (Hutang) hanya dapat diselesaikan pada hari Sabtu dan Minggu.</p>
+            <div className="bg-red-900/30 border border-red-500/30 rounded-xl p-4 text-center mb-3">
+                <p className="text-red-400 font-bold mb-1">Fitur Pelunasan (Sync) Terkunci</p>
+                <p className="text-red-300 text-sm">Pending Check-in (Hutang) via Last.fm hanya dapat diselesaikan pada hari Sabtu dan Minggu.</p>
             </div>
         ) : (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 mb-3">
               <button 
                 onClick={handleSync}
                 disabled={isLoading}
@@ -501,20 +501,20 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                 <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
                 {isLoading ? 'Syncing...' : 'Check Streams'}
               </button>
-              
-              {!hasCheckedInSelectedDate && 
-               selectedDateStr !== new Date().toLocaleDateString() && 
-               (currentUser.extraPointsBalance || 0) > 0 && (
-                <button 
-                  onClick={handlePatchAbsence}
-                  className="w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-yellow-600 hover:bg-yellow-500 text-white shadow-[0_0_15px_rgba(202,138,4,0.3)] border border-yellow-500/50"
-                  title="Gunakan 1 tabungan untuk menambal absen hari ini tanpa limit validasi."
-                >
-                  <Trophy size={18} />
-                  Tambal Absen (Gunakan 1 Tabungan)
-                </button>
-              )}
             </div>
+        )}
+
+        {!hasCheckedInSelectedDate && 
+         selectedDateStr !== new Date().toLocaleDateString() && 
+         (currentUser.extraPointsBalance || 0) > 0 && (
+          <button 
+            onClick={handlePatchAbsence}
+            className="w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-yellow-600 hover:bg-yellow-500 text-white shadow-[0_0_15px_rgba(202,138,4,0.3)] border border-yellow-500/50"
+            title="Gunakan 1 tabungan untuk menambal absen hari ini tanpa limit validasi."
+          >
+            <Trophy size={18} />
+            Tambal Absen (Gunakan 1 Tabungan)
+          </button>
         )}
         
         {error && !isLockedHutang && (
