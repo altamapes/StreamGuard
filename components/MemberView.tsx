@@ -57,7 +57,13 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
 
   // Calculate Check-in status dynamically
   const selectedDateStr = selectedDate.toLocaleDateString();
-  const hasCheckedInSelectedDate = currentUser.checkInHistory?.includes(selectedDateStr) || false;
+  const possibleDates = [
+    selectedDate.toLocaleDateString(),
+    selectedDate.toLocaleDateString('en-US'),
+    selectedDate.toLocaleDateString('en-GB'),
+    selectedDate.toLocaleDateString('id-ID')
+  ];
+  const hasCheckedInSelectedDate = currentUser.checkInHistory?.some(d => possibleDates.includes(d)) || false;
 
   const realToday = new Date();
   realToday.setHours(0,0,0,0);
@@ -532,7 +538,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         )}
 
         {!hasCheckedInSelectedDate && 
-         selectedDateStr !== new Date().toLocaleDateString() && 
+         selectedDate.toDateString() !== new Date().toDateString() && 
          (currentUser.extraPointsBalance || 0) > 0 && (
           <button 
             onClick={handlePatchAbsence}
