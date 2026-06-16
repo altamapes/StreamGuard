@@ -321,6 +321,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     const today = new Date();
     today.setHours(0,0,0,0);
     
+    let registerTimestamp = parseInt(user.id);
+    if (isNaN(registerTimestamp)) {
+      registerTimestamp = 0;
+    }
+    const registerDate = new Date(registerTimestamp);
+    registerDate.setHours(0,0,0,0);
+    
     let completedCount = 0;
     let targetDaysCount = 0;
 
@@ -328,6 +335,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     for (let i = 1; i <= 7; i++) {
       const date = new Date();
       date.setDate(date.getDate() - i);
+      date.setHours(0,0,0,0);
+
+      if (date < registerDate) {
+        continue; // Do not count days before the user was registered
+      }
+
       const possibleDates = [
         date.toLocaleDateString(),
         date.toLocaleDateString('en-US'),
