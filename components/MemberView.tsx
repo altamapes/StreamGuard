@@ -546,9 +546,6 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         </div>
       </div>
 
-      {renderWeeklyCheckIn()}
-
-      {/* Day Selector - Date Picker */}
       <div className="w-full mb-6 glass p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 border border-white/10">
         <div>
            <h3 className="text-white font-bold mb-1">Select Date</h3>
@@ -578,6 +575,8 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
           />
         </div>
       </div>
+
+      {renderWeeklyCheckIn()}
 
       {/* Sync Button Only (No Inputs) */}
       <div className="w-full glass p-6 rounded-2xl mb-6 shadow-[0_0_30px_rgba(0,0,0,0.3)]">
