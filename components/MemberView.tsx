@@ -443,6 +443,70 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     return dates;
   };
 
+  const renderWeeklyCheckIn = () => {
+    const current = new Date(selectedDate);
+    const day = current.getDay();
+    const diff = current.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(current.setDate(diff));
+    monday.setHours(0,0,0,0);
+
+    const checkInHistory = currentUser.checkInHistory || [];
+    const weekDays = [];
+
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      
+      const possibleDates = [
+        d.toLocaleDateString(),
+        d.toLocaleDateString('en-US'),
+        d.toLocaleDateString('en-GB'),
+        d.toLocaleDateString('id-ID')
+      ];
+      const hasCheckedIn = checkInHistory.some((historyD: string) => possibleDates.includes(historyD));
+
+      weekDays.push({
+        date: d,
+        hasCheckedIn
+      });
+    }
+
+    return (
+      <div className="w-full mb-6 bg-[#2B274B]/40 border border-white/5 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <CalendarCheck size={18} className="text-purple-400" />
+          <h3 className="text-white font-bold text-sm tracking-wide">WEEKLY CHECK-IN (MON-FRI)</h3>
+        </div>
+        
+        <div className="bg-[#1C1A32]/80 border border-white/5 rounded-2xl p-4 flex justify-between items-center px-4 md:px-8">
+          {weekDays.map((day, idx) => (
+            <div key={idx} className="flex flex-col items-center">
+              <span className="text-[10px] font-bold text-gray-400 mb-3 tracking-wider">
+                {day.date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
+              </span>
+              
+              <div 
+                className={`w-9 h-9 rounded-full flex items-center justify-center border-2 mb-3 transition-colors ${
+                  day.hasCheckedIn 
+                    ? 'border-emerald-500/50 bg-emerald-500/10' 
+                    : 'border-white/5 bg-transparent'
+                }`}
+              >
+                {day.hasCheckedIn ? (
+                  <CheckCircle2 size={18} className="text-emerald-500" />
+                ) : (
+                  <Circle size={18} className="text-white/10" />
+                )}
+              </div>
+              
+              <span className="text-xs font-bold text-gray-300">{day.date.getDate()}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="w-full max-w-md mx-auto p-4 flex flex-col items-center">
       
@@ -481,6 +545,8 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
           </div>
         </div>
       </div>
+
+      {renderWeeklyCheckIn()}
 
       {/* Day Selector - Date Picker */}
       <div className="w-full mb-6 glass p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 border border-white/10">
