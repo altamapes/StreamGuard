@@ -50,8 +50,16 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
     const endDate = new Date(parseInt(yStrW), parseInt(mStrW) - 1, parseInt(dStrW));
     endDate.setHours(0,0,0,0);
     
-    // Look back 7 days ending at endDate
-    for (let i = 0; i < 7; i++) {
+    // Find Monday of the week containing endDate
+    const currentDay = endDate.getDay();
+    const diffToMonday = currentDay === 0 ? 6 : currentDay - 1;
+    const startDate = new Date(endDate);
+    startDate.setDate(endDate.getDate() - diffToMonday);
+    startDate.setHours(0,0,0,0);
+
+    const daysCount = Math.round((endDate.getTime() - startDate.getTime()) / (86400000)) + 1;
+    
+    for (let i = 0; i < daysCount; i++) {
         const d = new Date(endDate);
         d.setDate(d.getDate() - i);
         
@@ -101,9 +109,8 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
     }
   }
 
-  // How many target days are there in this period?
-  // Only days with hasTracks count as target.
-  const targetDaysCount = datesToCheck.filter(d => d.hasTracks).length;
+  const isMonToFri = (dayIndex: number) => dayIndex >= 1 && dayIndex <= 5;
+  const targetDaysCount = datesToCheck.filter(d => d.hasTracks && isMonToFri(d.dayIndex)).length;
 
   const getReportForUser = (user: User) => {
     let completedCount = 0;
@@ -123,23 +130,18 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
           isCheckedIn = d.possibleDates.some(pd => user.checkInHistory!.includes(pd));
       }
       
-      if (d.hasTracks) {
-        if (isCheckedIn) {
+      if (isCheckedIn) {
           completedCount++;
-        } else if (d.isPast || d.possibleDates.includes(today.toLocaleDateString())) {
-           missingDates.push(d.shortDate);
-        }
+      } else if (d.hasTracks && isMonToFri(d.dayIndex)) {
+          if (d.isPast || d.possibleDates.includes(today.toLocaleDateString())) {
+             missingDates.push(d.shortDate);
+          }
       }
     });
 
-    // The user's obligation is a maximum of 5 days per week.
-    // We calculate debt based on the max obligation minus what they've completed.
-    const obligation = Math.min(targetDaysCount, reportType === 'weekly' ? 5 : 5 * 4); // 5 per week
-    const pastTargetDaysCount = datesToCheck.filter(d => d.hasTracks && (d.isPast || d.possibleDates.includes(today.toLocaleDateString()))).length;
+    const pastTargetDaysCount = datesToCheck.filter(d => d.hasTracks && isMonToFri(d.dayIndex) && (d.isPast || d.possibleDates.includes(today.toLocaleDateString()))).length;
     
-    // The current debt is max obligation (up to the current past days) minus completed.
-    const expectedSoFar = Math.min(pastTargetDaysCount, obligation);
-    debtCount = Math.max(0, expectedSoFar - completedCount);
+    debtCount = Math.max(0, pastTargetDaysCount - completedCount);
 
     return { completedCount, debtCount, missingDates };
   };
@@ -240,7 +242,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
                           })()
                        }</span>.</>
                     ) : reportType === 'weekly' ? (
-                       <>Menampilkan rekapitulasi 7 hari terakhir dari tanggal <span className="text-white font-bold">{
+                       <>Menampilkan rekapitulasi minggu ini (Senin - Minggu) hingga tanggal <span className="text-white font-bold">{
                           (() => {
                              const [y, m, d] = selectedWeekEnd.split('-');
                              return new Date(parseInt(y), parseInt(m) - 1, parseInt(d)).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})
