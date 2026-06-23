@@ -187,8 +187,9 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
              return true;
           });
 
-          if (foundTracks.length < totalMinPlayCount) {
-             totalMinPlayCount = foundTracks.length;
+          const distinctAccounts = new Set(foundTracks.map(ft => ft.listenedBy));
+          if (distinctAccounts.size < totalMinPlayCount) {
+             totalMinPlayCount = distinctAccounts.size;
           }
 
           foundTracks.forEach(ft => contributingAccounts.add(ft.listenedBy));
