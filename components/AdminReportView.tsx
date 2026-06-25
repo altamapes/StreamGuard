@@ -31,11 +31,13 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
     d.setHours(0,0,0,0);
     const dateStr = d.toLocaleDateString();
     const shortDate = d.toLocaleDateString('id-ID', {day: 'numeric', month: 'short'});
+    const yyyyMmDd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const possibleDates = [
         d.toLocaleDateString(),
         d.toLocaleDateString('en-US'),
         d.toLocaleDateString('en-GB'),
-        d.toLocaleDateString('id-ID')
+        d.toLocaleDateString('id-ID'),
+        yyyyMmDd
     ];
 
     const dayIndex = d.getDay();
@@ -65,11 +67,13 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
         
         const dateStr = d.toLocaleDateString();
         const shortDate = d.toLocaleDateString('id-ID', {day: 'numeric', month: 'short'});
+        const yyyyMmDd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const possibleDates = [
             d.toLocaleDateString(),
             d.toLocaleDateString('en-US'),
             d.toLocaleDateString('en-GB'),
-            d.toLocaleDateString('id-ID')
+            d.toLocaleDateString('id-ID'),
+            yyyyMmDd
         ];
 
         const dayIndex = d.getDay();
@@ -93,11 +97,13 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({ users, schedul
         
         const dateStr = d.toLocaleDateString();
         const shortDate = d.toLocaleDateString('id-ID', {day: 'numeric', month: 'short'});
+        const yyyyMmDd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const possibleDates = [
             d.toLocaleDateString(),
             d.toLocaleDateString('en-US'),
             d.toLocaleDateString('en-GB'),
-            d.toLocaleDateString('id-ID')
+            d.toLocaleDateString('id-ID'),
+            yyyyMmDd
         ];
 
         const dayIndex = d.getDay();

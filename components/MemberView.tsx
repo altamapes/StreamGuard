@@ -57,11 +57,13 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
 
   // Calculate Check-in status dynamically
   const selectedDateStr = selectedDate.toLocaleDateString();
+  const yyyyMmDd = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
   const possibleDates = [
     selectedDate.toLocaleDateString(),
     selectedDate.toLocaleDateString('en-US'),
     selectedDate.toLocaleDateString('en-GB'),
-    selectedDate.toLocaleDateString('id-ID')
+    selectedDate.toLocaleDateString('id-ID'),
+    yyyyMmDd
   ];
   const hasCheckedInSelectedDate = currentUser.checkInHistory?.some(d => possibleDates.includes(d)) || false;
 
@@ -458,11 +460,13 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
       
+      const yyyyMmDd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       const possibleDates = [
         d.toLocaleDateString(),
         d.toLocaleDateString('en-US'),
         d.toLocaleDateString('en-GB'),
-        d.toLocaleDateString('id-ID')
+        d.toLocaleDateString('id-ID'),
+        yyyyMmDd
       ];
       const hasCheckedIn = checkInHistory.some((historyD: string) => possibleDates.includes(historyD));
 
