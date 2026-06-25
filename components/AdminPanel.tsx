@@ -5,6 +5,7 @@ import { storageService } from '../services/storage';
 import { fetchRecentTracks } from '../services/lastFmService';
 import { DEFAULT_CLOUD_CONFIG, DEFAULT_SPOTIFY_ID } from '../constants';
 import { AdminReportView } from './AdminReportView';
+import { getPossibleDates } from '../src/dateUtils';
 
 interface AdminPanelProps {
   onExit: () => void;
@@ -304,12 +305,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   // Helper to check if user checked in today
   const isCheckedInToday = (user: User) => {
     const d = new Date();
-    const todayStr = d.toLocaleDateString();
-    const todayEnUS = d.toLocaleDateString('en-US');
-    const todayEnGB = d.toLocaleDateString('en-GB'); // DD/MM/YYYY
-    const todayIdID = d.toLocaleDateString('id-ID');
-    
-    const possibleDates = [todayStr, todayEnUS, todayEnGB, todayIdID];
+    const possibleDates = getPossibleDates(d);
     
     if (user.checkInHistory) {
       if (possibleDates.some(date => user.checkInHistory!.includes(date))) return true;
@@ -341,12 +337,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         continue; // Do not count days before the user was registered
       }
 
-      const possibleDates = [
-        date.toLocaleDateString(),
-        date.toLocaleDateString('en-US'),
-        date.toLocaleDateString('en-GB'),
-        date.toLocaleDateString('id-ID')
-      ];
+      const possibleDates = getPossibleDates(date);
       const dayIndex = date.getDay();
       
       const dayConfig = schedule[dayIndex];

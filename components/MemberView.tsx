@@ -4,6 +4,7 @@ import { TargetTrack, User, WeeklySchedule } from '../types';
 import { fetchRecentTracks } from '../services/lastFmService';
 import { storageService } from '../services/storage';
 import { DEFAULT_SPOTIFY_ID } from '../constants';
+import { getPossibleDates } from '../src/dateUtils';
 
 interface MemberViewProps {
   weeklySchedule: WeeklySchedule;
@@ -57,14 +58,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
 
   // Calculate Check-in status dynamically
   const selectedDateStr = selectedDate.toLocaleDateString();
-  const yyyyMmDd = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
-  const possibleDates = [
-    selectedDate.toLocaleDateString(),
-    selectedDate.toLocaleDateString('en-US'),
-    selectedDate.toLocaleDateString('en-GB'),
-    selectedDate.toLocaleDateString('id-ID'),
-    yyyyMmDd
-  ];
+  const possibleDates = getPossibleDates(selectedDate);
   const hasCheckedInSelectedDate = currentUser.checkInHistory?.some(d => possibleDates.includes(d)) || false;
 
   const realToday = new Date();
@@ -297,7 +291,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   };
 
   const handlePatchAbsence = async () => {
-    if (!currentUser.extraPointsBalance || currentUser.extraPointsBalance <= 0) return;
+    if (!currentUser.extraPointsBalance || currentUser.extraPointsBalance <= 0 || isLockedHutang) return;
     try {
       const newBalance = currentUser.extraPointsBalance - 1;
       const newPatchedDates = [...(currentUser.patchedDates || []), selectedDateStr];
@@ -460,14 +454,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
       
-      const yyyyMmDd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const possibleDates = [
-        d.toLocaleDateString(),
-        d.toLocaleDateString('en-US'),
-        d.toLocaleDateString('en-GB'),
-        d.toLocaleDateString('id-ID'),
-        yyyyMmDd
-      ];
+      const possibleDates = getPossibleDates(d);
       const hasCheckedIn = checkInHistory.some((historyD: string) => possibleDates.includes(historyD));
 
       weekDays.push({
@@ -609,7 +596,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
 
         {!hasCheckedInSelectedDate && 
          selectedDate.toDateString() !== new Date().toDateString() && 
-         (currentUser.extraPointsBalance || 0) > 0 && (
+         (currentUser.extraPointsBalance || 0) > 0 && !isLockedHutang && (
           <button 
             onClick={handlePatchAbsence}
             className="w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-yellow-600 hover:bg-yellow-500 text-white shadow-[0_0_15px_rgba(202,138,4,0.3)] border border-yellow-500/50"
