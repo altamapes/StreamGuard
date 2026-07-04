@@ -408,6 +408,18 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
       );
     }
 
+    if (isSelectedWeekend && !isComplete) {
+      return (
+        <button 
+          disabled
+          className="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 bg-white/5 text-gray-500 cursor-not-allowed border border-white/5"
+        >
+          <Trophy size={24} />
+          Complete 100% to Claim Point Savings
+        </button>
+      );
+    }
+
     if (isComplete || pointsToClaim > 0) {
       return (
         <button 
