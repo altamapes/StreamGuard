@@ -138,6 +138,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     }
   };
 
+  const handleAdjustPoints = async (userId: string, amount: number) => {
+    try {
+      const user = usersList.find(u => u.id === userId);
+      if (!user) return;
+      const currentPoints = user.extraPointsBalance || 0;
+      const newPoints = Math.max(0, currentPoints + amount); // Prevent negative points
+      
+      const updated = await storageService.updateUserProfile(userId, {
+        extraPointsBalance: newPoints
+      });
+      
+      setUsersList(usersList.map(u => u.id === userId ? updated : u));
+      if (viewingUser && viewingUser.id === userId) {
+        setViewingUser(updated);
+      }
+    } catch (e) {
+      console.error("Failed to update points", e);
+      alert("Failed to update points.");
+    }
+  };
+
   const handleResetPassword = async (userId: string, username: string) => {
     const newPassword = window.prompt(`Enter new password for user "${username}":`);
     if (newPassword !== null && newPassword.trim().length > 0) {
@@ -908,8 +929,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                 </div>
                                 <div>
                                     <label className="text-[10px] text-gray-500 block">Points Savings</label>
-                                    <div className="text-sm font-medium text-yellow-500 font-bold">
-                                        {viewingUser.extraPointsBalance || 0} Points
+                                    <div className="flex items-center gap-3 mt-1">
+                                        <div className="text-sm font-medium text-yellow-500 font-bold">
+                                            {viewingUser.extraPointsBalance || 0} Points
+                                        </div>
+                                        <div className="flex items-center gap-1 border border-white/10 rounded-lg overflow-hidden">
+                                            <button 
+                                                onClick={() => handleAdjustPoints(viewingUser.id, -1)}
+                                                className="w-7 h-7 flex items-center justify-center bg-white/5 hover:bg-white/20 text-white transition-colors border-r border-white/10"
+                                                title="Decrease Points"
+                                            >
+                                                -
+                                            </button>
+                                            <button 
+                                                onClick={() => handleAdjustPoints(viewingUser.id, 1)}
+                                                className="w-7 h-7 flex items-center justify-center bg-white/5 hover:bg-white/20 text-white transition-colors"
+                                                title="Increase Points"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                                 <div>
