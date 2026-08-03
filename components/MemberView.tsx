@@ -57,14 +57,17 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const spotifyId = dayConfig.spotifyId || DEFAULT_SPOTIFY_ID;
 
   // Calculate Check-in status dynamically
-  const selectedDateStr = selectedDate.toLocaleDateString();
-  const possibleDates = getPossibleDates(selectedDate);
-  const hasCheckedInSelectedDate = currentUser.checkInHistory?.some(d => possibleDates.includes(d)) || false;
-
   const realToday = new Date();
   realToday.setHours(0,0,0,0);
   const compareDateVal = new Date(selectedDate);
   compareDateVal.setHours(0,0,0,0);
+
+  const selectedDateStr = selectedDate.toLocaleDateString();
+  const possibleDates = getPossibleDates(selectedDate);
+  
+  const isSelectedFuture = compareDateVal.getTime() > realToday.getTime();
+  const hasCheckedInSelectedDate = !isSelectedFuture && (currentUser.checkInHistory?.some(d => possibleDates.includes(d)) || false);
+
   
   const isPastDate = compareDateVal.getTime() < realToday.getTime();
   const currentDayOfWeekVal = new Date().getDay();
@@ -467,8 +470,12 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
       
+      const compareD = new Date(d);
+      compareD.setHours(0,0,0,0);
+
       const possibleDates = getPossibleDates(d);
-      const hasCheckedIn = checkInHistory.some((historyD: string) => possibleDates.includes(historyD));
+      const isFuture = compareD.getTime() > realToday.getTime();
+      const hasCheckedIn = !isFuture && checkInHistory.some((historyD: string) => possibleDates.includes(historyD));
 
       weekDays.push({
         date: d,
